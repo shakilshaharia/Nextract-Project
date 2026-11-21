@@ -1,0 +1,35 @@
+packages:
+  - "lib/*"
+  - "artifacts/*"
+
+# Only install package versions published at least a day ago (supply-chain safety).
+minimumReleaseAge: 1440
+
+# Native/build-step packages allowed to run their install scripts.
+onlyBuiltDependencies:
+  - prisma
+  - "@prisma/engines"
+  - "@prisma/client"
+  - esbuild
+  - sharp
+
+# Shared dependency versions used across the CMS packages. Pinned to match the
+# proven CMS stack shared by the Nextract packages.
+catalog:
+  react: 19.1.0
+  react-dom: 19.1.0
+  typescript: ~5.9.3
+  zod: ^4.6.7
+  tsx: ^4.21.0
+  "@types/node": ^25.3.3
+  "@types/react": ^19.2.0
+  "@types/react-dom": ^19.2.0
+  "@tanstack/react-query": ^5.90.21
+  "@tailwindcss/vite": ^4.1.14
+  "@vitejs/plugin-react": ^5.0.4
+  tailwindcss: ^4.1.14
+  tailwind-merge: ^3.3.1
+  clsx: ^2.1.1
+  lucide-react: ^0.545.0
+  wouter: ^3.3.5
+  vite: ^7.3.2

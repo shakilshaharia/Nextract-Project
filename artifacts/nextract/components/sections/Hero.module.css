@@ -1,0 +1,260 @@
+.hero {
+  position: relative;
+  /* Blends below are computed against this background, like the Figma frame. */
+  isolation: isolate;
+  background: var(--bg-page);
+  padding-top: 20px;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* 1600px design frame, centered; positions below are Figma coordinates. */
+.frame {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 800px);
+  width: 1600px;
+}
+
+.beams {
+  position: absolute;
+  left: -697px;
+  top: -1080px;
+  width: 2447px;
+  height: 2510px;
+  max-width: none;
+  mix-blend-mode: plus-lighter;
+}
+
+.glow {
+  position: absolute;
+  left: 395.6px;
+  top: -339.3px;
+  width: 818px;
+  height: 1608px;
+  max-width: none;
+  opacity: 0.3;
+  mix-blend-mode: plus-lighter;
+}
+
+.guides {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  overflow: visible;
+}
+
+.starTop,
+.starLeft,
+.starRight {
+  position: absolute;
+}
+
+.starTop {
+  left: 1466px;
+  top: 45px;
+}
+
+.starLeft {
+  left: 820px;
+  top: 712px;
+}
+
+.starRight {
+  left: 1464px;
+  top: 711px;
+}
+
+.inner {
+  position: relative;
+  width: min(var(--container), 100% - 2 * var(--gutter));
+  margin: 0 auto;
+}
+
+/* Figma: Hero Content — 72px below the navigation */
+.content {
+  display: grid;
+  grid-template-columns: 669px 647px;
+  margin-top: 72px;
+  min-height: 578px;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 32px;
+  padding-top: 40px;
+}
+
+.textBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.title {
+  font-size: 64px;
+  line-height: 70px;
+  letter-spacing: -1.5px;
+  color: var(--color-navy);
+}
+
+.titleTrail {
+  display: block;
+  color: var(--color-slate);
+}
+
+.description {
+  max-width: 586px;
+  font-size: 18px;
+  line-height: 30.6px;
+  color: rgba(31, 63, 92, 0.84);
+}
+
+.visual {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 578px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8fa 100%);
+  box-shadow:
+    inset 0 0 0 1px var(--color-border),
+    0 1px 0 rgba(31, 63, 92, 0.03),
+    0 40px 60px -32px rgba(31, 63, 92, 0.28);
+}
+
+/* Browser-style chrome bar */
+.windowBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 52px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.tab {
+  flex: 0 1 300px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(31, 63, 92, 0.08);
+}
+
+.tabSmall {
+  flex: 0 0 64px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(31, 63, 92, 0.08);
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.illustration {
+  width: min(92%, 560px);
+  aspect-ratio: 643 / 426;
+  height: auto;
+}
+
+/* Soft blur + fade so the window content dissolves toward the bottom edge */
+.stageFade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 170px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(246, 248, 250, 0) 0%, #f6f8fa 82%);
+  backdrop-filter: blur(3px);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 55%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 55%);
+}
+
+@media (max-width: 1343px) {
+  .backdrop .guides,
+  .starTop,
+  .starLeft,
+  .starRight {
+    display: none;
+  }
+
+  .content {
+    grid-template-columns: minmax(0, 669fr) minmax(0, 647fr);
+    column-gap: 0;
+  }
+
+  .visual {
+    height: auto;
+    min-height: 100%;
+  }
+}
+
+@media (max-width: 1279px) {
+  .content {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+
+  .title {
+    font-size: 48px;
+    line-height: 54px;
+    letter-spacing: -1.2px;
+  }
+
+  .copy {
+    padding-right: 32px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .content {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    margin-top: 56px;
+    min-height: 0;
+  }
+
+  .copy {
+    padding: 0;
+  }
+
+  .visual {
+    aspect-ratio: 647 / 578;
+    min-height: 0;
+    max-height: 440px;
+  }
+}
+
+@media (max-width: 767px) {
+  .content {
+    margin-top: 20px;
+    gap: 40px;
+  }
+
+  .title {
+    font-size: 40px;
+    line-height: 46px;
+    letter-spacing: -1px;
+  }
+
+  .description {
+    font-size: 16px;
+    line-height: 27.2px;
+  }
+}

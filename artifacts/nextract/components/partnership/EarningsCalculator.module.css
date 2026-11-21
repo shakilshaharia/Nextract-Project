@@ -1,0 +1,377 @@
+.section {
+  padding: clamp(44px, 4.6vw, 64px) var(--gutter);
+  background: linear-gradient(180deg, var(--bg-soft), var(--bg-page));
+}
+
+.inner {
+  max-width: var(--container);
+  margin: 0 auto;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 40px;
+}
+
+.eyebrow {
+  margin: 0 0 13px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-blue);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(27px, 3vw, 40px);
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  color: var(--color-navy);
+}
+
+.subtitle {
+  max-width: 665px;
+  margin: 16px 0 0;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--color-slate);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+  align-items: stretch;
+}
+
+.controls,
+.results {
+  padding: clamp(24px, 3vw, 36px);
+  border-radius: var(--radius-lg);
+}
+
+.controls {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 15px 45px rgba(8, 48, 80, 0.06);
+}
+
+.controlsTitle {
+  margin: 0 0 24px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--color-navy);
+}
+
+.label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-navy);
+}
+
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.tier {
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+
+.tier input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tierBox {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 104px;
+  padding: 15px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.tierBox strong {
+  font-size: 15px;
+  color: var(--color-navy);
+}
+
+.tierBox small {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-slate);
+}
+
+.tier input:checked + .tierBox {
+  border-color: var(--color-blue);
+  background: #eff8ff;
+}
+
+.tier input:focus-visible + .tierBox {
+  outline: 3px solid #8ed0ff;
+  outline-offset: 2px;
+}
+
+.group {
+  margin-bottom: 23px;
+}
+
+.number {
+  width: 100%;
+  height: 48px;
+  padding: 12px;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--color-navy);
+  background: var(--bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.number:focus {
+  outline: none;
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 3px rgba(0, 130, 251, 0.1);
+}
+
+.slider {
+  width: 100%;
+  margin-top: 17px;
+  accent-color: var(--color-blue);
+  cursor: pointer;
+}
+
+.planNote {
+  margin: 0;
+  padding: 12px 15px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #45697e;
+  background: #f3f9ff;
+  border-radius: 11px;
+}
+
+/* Results panel */
+.results {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-white);
+  background: linear-gradient(145deg, #05243e, #0b3652);
+}
+
+.overline {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #98d9ff;
+}
+
+.metrics {
+  display: grid;
+  gap: 14px;
+  margin: 17px 0 10px;
+}
+
+.fiveYear,
+.annual {
+  padding: 20px;
+  border-radius: 17px;
+}
+
+.fiveYear {
+  padding: 23px 24px;
+  background: linear-gradient(135deg, rgba(0, 130, 251, 0.3), rgba(0, 130, 251, 0.1));
+  border: 1px solid rgba(130, 205, 255, 0.52);
+}
+
+.annual {
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.fiveYear span,
+.annual span,
+.monthlyLine span {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #c2e1f3;
+}
+
+.fiveNumber {
+  margin: 9px 0 8px;
+  font-size: clamp(44px, 5.4vw, 68px);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 1.13;
+  color: var(--color-white);
+  font-variant-numeric: tabular-nums;
+}
+
+.fiveYear small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #bbd6e9;
+}
+
+.annualNumber {
+  margin-top: 9px;
+  font-size: clamp(30px, 3.6vw, 43px);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 1.13;
+  color: #b9e6ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.monthlyLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.monthlyLine strong {
+  font-size: 20px;
+  color: var(--color-white);
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown {
+  margin: 29px 0 19px;
+  padding: 12px 0;
+  border-top: 1px solid #365875;
+  border-bottom: 1px solid #365875;
+}
+
+.breakdown div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 11px 0;
+}
+
+.breakdown span {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #bcd1df;
+}
+
+.breakdown strong {
+  font-size: 14px;
+  color: var(--color-white);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.disclaimer {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.65;
+  color: #b5cad9;
+}
+
+/* Feature comparison */
+.features {
+  max-width: 1040px;
+  margin: 27px auto 0;
+  padding: 18px 22px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.features summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-navy);
+}
+
+.featureScroll {
+  margin-top: 17px;
+  overflow: auto;
+}
+
+.features table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.features th,
+.features td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.features th:not(:first-child),
+.features td:not(:first-child) {
+  text-align: center;
+  min-width: 88px;
+}
+
+.features th {
+  color: var(--color-navy);
+  background: var(--bg-subtle);
+}
+
+.features td {
+  color: var(--color-slate);
+}
+
+@media (max-width: 850px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .tiers {
+    grid-template-columns: 1fr;
+  }
+
+  .tierBox {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .fiveNumber {
+    font-size: clamp(36px, 10vw, 50px);
+  }
+
+  .annualNumber {
+    font-size: 34px;
+  }
+
+  .fiveYear {
+    padding: 20px 18px;
+  }
+}

@@ -1,0 +1,99 @@
+/* Figma: Problame Statement — #f9f8f7, padding 120/140, gap 55 */
+.section {
+  background: var(--bg-warm);
+  padding: 120px var(--gutter);
+  color: var(--color-ink);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 55px;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.heading {
+  --description-opacity: 1;
+}
+
+.heading p {
+  color: var(--color-warm-gray);
+}
+
+.list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  width: 100%;
+}
+
+/* Figma: Card — #f0f0f2, radius 12, padding 32/16 */
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 32px 16px;
+  border-radius: 12px;
+  background: #f0f0f2;
+}
+
+.itemTitle {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 30.6px;
+}
+
+.itemDescription {
+  font-size: 16px;
+  line-height: 27.2px;
+  color: var(--color-warm-gray);
+}
+
+.media {
+  width: 100%;
+  aspect-ratio: 1320 / 743;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #000;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 1343px) {
+  .list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1023px) {
+  .section {
+    padding-block: 96px;
+  }
+
+  .list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    max-width: 560px;
+  }
+
+  .itemDescription {
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .section {
+    padding-block: 72px;
+  }
+
+  .inner {
+    gap: 40px;
+  }
+}

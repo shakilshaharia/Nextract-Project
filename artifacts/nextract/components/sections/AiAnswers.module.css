@@ -1,0 +1,256 @@
+/* Figma "AI Section": #f9fafb, padding 80, gap 64, content 1440 */
+.section {
+  background: var(--bg-subtle);
+  padding: 80px var(--gutter);
+  color: var(--color-navy);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+  max-width: var(--container-wide);
+  margin: 0 auto;
+}
+
+/* Header: title left, lead paragraph right */
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.title {
+  max-width: 585px;
+  font-size: 52px;
+  line-height: 60px;
+  letter-spacing: -1.5px;
+  color: var(--color-ink-strong);
+}
+
+.lead {
+  max-width: 574px;
+  font-size: 18px;
+  line-height: 30.6px;
+  color: var(--color-warm-gray);
+}
+
+/*
+ * Body: a stair shape — 3 step rows on the left, a tall panel on the right.
+ * The active step's card extends under the panel's left edge (z-order) so the
+ * two merge into one continuous shape, exactly like the Figma union.
+ */
+.body {
+  position: relative;
+  min-height: 514px;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  width: 720px;
+}
+
+.step {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 171px;
+  padding: 24px;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+/* Icon + title share a centered row; description sits below, aligned to the title */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.step[aria-selected="true"] {
+  background: var(--bg-soft);
+  border-color: var(--color-border);
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+/* Embossed 48×48 icon tile */
+.icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 10.8px;
+  background: linear-gradient(180deg, rgba(249, 249, 250, 0.4), #f9f9fa);
+  box-shadow: inset 0 0 0 1px var(--color-border), inset 0 1px 1.5px rgba(255, 255, 255, 0.6);
+}
+
+.icon::before {
+  content: "";
+  position: absolute;
+  width: 37px;
+  height: 37px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 1px rgba(31, 63, 92, 0.06);
+}
+
+.iconDots {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle 1px at 6px 6px, #fff, transparent 100%),
+    radial-gradient(circle 1px at 42px 6px, #fff, transparent 100%),
+    radial-gradient(circle 1px at 6px 42px, #fff, transparent 100%),
+    radial-gradient(circle 1px at 42px 42px, #fff, transparent 100%);
+}
+
+.icon img {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.stepTitle {
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: -0.5px;
+  color: var(--color-navy);
+}
+
+/* Aligned under the title (icon 48 + 16 gap) */
+.stepDesc {
+  margin-left: 64px;
+  max-width: 473px;
+  font-size: 16px;
+  line-height: 27.2px;
+  color: rgba(31, 63, 92, 0.64);
+}
+
+/* Right panel — tall rounded container, overlaps the active card by 42px */
+.panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 762px;
+  height: 100%;
+  border-radius: 24px;
+  background: var(--bg-soft);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  overflow: hidden;
+}
+
+/* Lottie animation box — fits inside the panel, centered */
+.panelLottie {
+  width: 82%;
+  max-width: 440px;
+  height: 90%;
+  animation: ai-panel-fade 0.35s ease;
+}
+
+.panelLottie :global(svg) {
+  display: block;
+}
+
+@keyframes ai-panel-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panelLottie {
+    animation: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .section {
+    padding-block: 72px;
+  }
+
+  .inner {
+    gap: 40px;
+  }
+
+  .head {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .title {
+    font-size: 40px;
+    line-height: 46px;
+    letter-spacing: -1px;
+  }
+
+  .lead {
+    font-size: 16px;
+    line-height: 27.2px;
+  }
+
+  /* Stack: steps as plain cards, panel full-width below */
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+  }
+
+  .steps {
+    width: 100%;
+    gap: 12px;
+  }
+
+  .step {
+    min-height: 0;
+  }
+
+  .panel {
+    position: static;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 11;
+  }
+}
+
+@media (max-width: 767px) {
+  .title {
+    font-size: 32px;
+    line-height: 38px;
+  }
+
+  .step {
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .stepTitle {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  .panel {
+    aspect-ratio: 3 / 4;
+  }
+}

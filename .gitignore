@@ -1,0 +1,52 @@
+# ---- Secrets & environment (NEVER commit) ----
+.env
+.env.*
+!.env.example
+.npmrc
+*.pem
+*.key
+
+# ---- Dependencies ----
+node_modules/
+.pnpm-store/
+
+# ---- Build outputs / generated ----
+.next/
+dist/
+build/
+out/
+*.tsbuildinfo
+artifacts/cms-api/src/generated/
+
+# ---- Design source / reference assets (not needed to run) ----
+.figma/
+.partner/
+Home Page.jpg
+
+# ---- Local data, backups, analysis (not part of source) ----
+local-data/
+graphify-out/
+.graphifyignore
+*.tar.gz
+*.sql
+*.sql.gz
+
+# ---- Dev artifacts / auto-generated (regenerate on run) ----
+dev-mail/
+AGENTS.md
+
+# ---- Documentation & reports (kept locally, not in repo) ----
+/*.md
+/*.txt
+/LIVE-DEPLOYMENT-VERIFICATION-2026-11-08.json
+artifacts/cms-api/README.md
+artifacts/nextract/README.md
+
+# ---- Logs & caches ----
+*.log
+.cache/
+.turbo/
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db

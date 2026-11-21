@@ -1,0 +1,10 @@
+.section { padding: clamp(3rem, 6vw, 6rem) 1.25rem; background: #fff; }
+.content { width: min(100%, 880px); margin: 0 auto; color: #334155; font-size: 1.05rem; line-height: 1.8; }
+.content h2, .content h3, .content h4 { margin: 1.8em 0 .6em; color: #0f172a; line-height: 1.2; }
+.content h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); }
+.content h3 { font-size: 1.5rem; }
+.content p, .content ul, .content ol, .content blockquote { margin: 0 0 1.2em; }
+.content ul, .content ol { padding-left: 1.5rem; }
+.content a { color: #0077e6; text-decoration: underline; }
+.content img { max-width: 100%; height: auto; border-radius: 1rem; }
+.content blockquote { border-left: 3px solid #0082fb; padding-left: 1.2rem; color: #475569; }

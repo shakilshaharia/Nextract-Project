@@ -1,0 +1,745 @@
+// Nextract CMS database schema.
+//
+// Content that has a fixed, queryable shape (slugs, statuses, dates, order)
+// lives in columns. Content whose shape is defined by the frontend (page
+// sections, SEO, product features) lives in JSON validated by the zod schemas
+// in @workspace/cms-content, so the database never holds a shape the site
+// cannot render.
+//
+// MySQL 8 / MariaDB. A plain String is VARCHAR(191); longer fields carry an
+// explicit size matching the longest value the API accepts for them.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ---------------------------------------------------------------------------
+// Users and authentication
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  EDITOR
+  AUTHOR
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique @db.VarChar(255)
+  name         String
+  passwordHash String
+  role         Role      @default(AUTHOR)
+  avatarUrl    String    @default("") @db.VarChar(2048)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  failedLogins Int       @default(0)
+  lockedUntil  DateTime?
+  // Two-factor auth. TOTP: the secret is stored encrypted and is on only once
+  // totpEnabledAt is set; backupCodes holds the one-time recovery codes as
+  // hashes. Email OTP: a 6-digit code emailed at sign-in; emailOtp* hold the
+  // current pending code (hashed) while a sign-in is in progress.
+  totpSecret        String?   @db.VarChar(255)
+  totpEnabledAt     DateTime?
+  backupCodes       Json?
+  emailOtpEnabled   Boolean   @default(false)
+  emailOtpCodeHash  String?   @db.VarChar(191)
+  emailOtpExpiresAt DateTime?
+  emailOtpAttempts  Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions     Session[]
+  resetTokens  PasswordResetToken[]
+  posts        Post[]               @relation("PostAuthor")
+  pagesCreated Page[]               @relation("PageAuthor")
+  pagesEdited  Page[]               @relation("PageEditor")
+  media        MediaAsset[]
+  activity     ActivityLog[]
+  workflowNotifications WorkflowNotification[]
+}
+
+// Server-side sessions: the cookie holds a random token, the database holds
+// only its SHA-256, so a leaked database row cannot be replayed as a cookie.
+model Session {
+  id         String   @id
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  ip         String   @default("")
+  userAgent  String   @default("") @db.VarChar(300)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Pages
+// ---------------------------------------------------------------------------
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+enum WorkflowState {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+}
+
+// A page is an ordered list of sections. Editors change the working copy;
+// publishing copies it into `published`, which is all the public site reads.
+// That gap is what makes preview-before-publish possible.
+model Page {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String        @db.VarChar(255)
+  excerpt       String        @default("") @db.VarChar(600)
+  featuredImage String        @default("") @db.VarChar(2048)
+  // home and contact back hard-wired routes, so they can be edited but not
+  // deleted or re-slugged.
+  isSystem      Boolean       @default(false)
+  template      String        @default("default")
+  status        ContentStatus @default(DRAFT)
+  publishAt     DateTime?
+  publishedAt   DateTime?
+  sections      Json
+  seo           Json
+  published     Json?
+  hasChanges    Boolean       @default(false)
+  workflowState WorkflowState @default(DRAFT)
+  workflowVersion Int         @default(0)
+  approvedVersion Int?
+  reviewerId    String?
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  visualDraft   Json?
+  visualVersion Int           @default(0)
+  visualRevisions PageVisualRevision[]
+  authorId      String?
+  author        User?         @relation("PageAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  updatedById   String?
+  updatedBy     User?         @relation("PageEditor", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status, publishAt])
+}
+
+model PageVisualRevision {
+  id          String   @id @default(cuid())
+  pageId      String
+  page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  layout      Json
+  action      String   @db.VarChar(20)
+  createdById String?
+  createdByName String  @db.VarChar(191)
+  createdAt   DateTime @default(now())
+
+  @@index([pageId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Resources (blogs, use cases, events)
+// ---------------------------------------------------------------------------
+
+// A resource is one of three kinds. Fields common to all live in columns;
+// the fields specific to use cases and events live in `details`, validated by
+// the matching zod schema in @workspace/cms-content on every write.
+enum ResourceType {
+  BLOG
+  USE_CASE
+  EVENT
+}
+
+model Post {
+  id               String        @id @default(cuid())
+  slug             String        @unique
+  title            String        @db.VarChar(255)
+  type             ResourceType  @default(BLOG)
+  excerpt          String        @default("") @db.VarChar(600)
+  featuredImage    String        @default("") @db.VarChar(2048)
+  featuredImageAlt String        @default("") @db.VarChar(300)
+  contentJson      Json
+  // MySQL cannot give a TEXT column a default, so creates always set it.
+  contentHtml      String        @db.MediumText
+  readingMinutes   Int           @default(1)
+  status           ContentStatus @default(DRAFT)
+  // At most one published resource is featured at a time (enforced in the API).
+  featured         Boolean       @default(false)
+  publishAt        DateTime?
+  publishedAt      DateTime?
+  publishedSnapshot Json?
+  workflowState    WorkflowState @default(DRAFT)
+  workflowVersion  Int           @default(0)
+  approvedVersion  Int?
+  reviewerId       String?
+  submittedAt      DateTime?
+  reviewedAt       DateTime?
+  seo              Json
+  // Which product solutions this resource relates to (JSON array of names).
+  solutions        Json?
+  // Use-case and event fields; null for blogs. Shape depends on `type`.
+  details          Json?
+  // Optional FAQ entries shown on the public page. JSON array of
+  // { question, answer }, validated against postFaqsSchema on every write.
+  // Available on all resource types (blog, use case, event).
+  faqs             Json?
+  // Ordered post ids picked by the editor (JSON array of strings).
+  relatedIds       Json
+  authorId         String
+  author           User          @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  categories       Category[]
+  tags             Tag[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([type, status])
+  @@index([authorId])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String   @default("") @db.VarChar(400)
+  posts       Post[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  posts     Post[]
+  createdAt DateTime @default(now())
+}
+
+model ContentRevision {
+  id         String   @id @default(cuid())
+  entityType String   @db.VarChar(10)
+  entityId   String   @db.VarChar(191)
+  version    Int
+  action     String   @db.VarChar(30)
+  snapshot   Json?
+  comment    String   @db.Text
+  actorId    String?
+  actorName  String   @db.VarChar(191)
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+}
+
+model WorkflowNotification {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entityType String    @db.VarChar(10)
+  entityId   String    @db.VarChar(191)
+  message    String    @db.VarChar(500)
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, readAt, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Reusable collections — each mirrors a block the homepage renders
+// ---------------------------------------------------------------------------
+
+model Metric {
+  id        String   @id @default(cuid())
+  value     String
+  label     String
+  order     Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  quote       String   @db.VarChar(800)
+  role        String
+  segment     String   @default("")
+  outcome     String   @default("")
+  explanation String   @default("") @db.VarChar(400)
+  order       Int      @default(0)
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([order])
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  question  String   @db.VarChar(300)
+  answer    String   @default("") @db.VarChar(3000)
+  order     Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+}
+
+model ClientLogo {
+  id         String   @id @default(cuid())
+  name       String
+  imageUrl   String   @default("") @db.VarChar(2048)
+  legacyMark String?
+  order      Int      @default(0)
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([order])
+}
+
+// A product experience card. Its feature tabs are an ordered JSON array
+// validated against productFeatureSchema.
+model Product {
+  id         String   @id @default(cuid())
+  name       String
+  kicker     String   @default("")
+  anchorId   String   @default("")
+  introTitle String   @default("") @db.VarChar(255)
+  introBody  String   @default("") @db.VarChar(800)
+  bridge     String   @default("") @db.VarChar(255)
+  ctaLabel   String   @default("")
+  features   Json
+  order      Int      @default(0)
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([order])
+}
+
+// ---------------------------------------------------------------------------
+// Media library
+// ---------------------------------------------------------------------------
+
+model MediaAsset {
+  id           String   @id @default(cuid())
+  filename     String   @db.VarChar(255)
+  // Where the bytes live: "local" (uploads dir), "s3", or "static" for files
+  // that ship with the site build and are only registered here.
+  driver       String
+  storageKey   String   @unique @db.VarChar(500)
+  url          String   @db.VarChar(2048)
+  mimeType     String
+  kind         String
+  sizeBytes    Int
+  width        Int?
+  height       Int?
+  title        String   @default("") @db.VarChar(255)
+  alt          String   @default("") @db.VarChar(500)
+  caption      String   @default("") @db.VarChar(500)
+  description  String   @default("") @db.VarChar(2000)
+  // Resized WebP copies; creates always set it (MySQL JSON has no default).
+  variants     Json
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([kind])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Navigation
+// ---------------------------------------------------------------------------
+
+model Menu {
+  id         String     @id @default(cuid())
+  location   String     @unique
+  ctaEnabled Boolean    @default(true)
+  ctaLabel   String     @default("Get Demo")
+  items      MenuItem[]
+  updatedAt  DateTime   @updatedAt
+}
+
+model MenuItem {
+  id       String     @id @default(cuid())
+  menuId   String
+  menu     Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parentId String?
+  parent   MenuItem?  @relation("MenuTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children MenuItem[] @relation("MenuTree")
+  label    String
+  url      String     @db.VarChar(500)
+  external Boolean    @default(false)
+  newTab   Boolean    @default(false)
+  enabled  Boolean    @default(true)
+  order    Int        @default(0)
+
+  @@index([menuId, parentId, order])
+}
+
+// ---------------------------------------------------------------------------
+// Settings, redirects, forms, activity
+// ---------------------------------------------------------------------------
+
+// One row per settings group ("site", "demo", "forms"), each validated by its
+// zod schema on write.
+model Setting {
+  key         String   @id
+  value       Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Redirect {
+  id         String    @id @default(cuid())
+  fromPath   String    @unique @db.VarChar(500)
+  toPath     String    @db.VarChar(1000)
+  statusCode Int       @default(301)
+  enabled    Boolean   @default(true)
+  hits       Int       @default(0)
+  lastHitAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+// Managed custom code injected into the public site: HTML, CSS or JS, placed in
+// the head/body, scoped to some or all pages, and switched on or off.
+model Snippet {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(120)
+  description String   @default("") @db.VarChar(400)
+  language    String   @db.VarChar(10)
+  code        String   @db.MediumText
+  consentCategory String @default("marketing") @db.VarChar(20)
+  location    String   @default("head") @db.VarChar(20)
+  scope       String   @default("everywhere") @db.VarChar(20)
+  paths       Json?
+  tags        Json?
+  priority    Int      @default(10)
+  active      Boolean  @default(false)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active, location])
+}
+
+// A pseudonymous record of an explicit preference decision. The browser's
+// visitor token is random and carries no IP or user-agent information.
+model ConsentRecord {
+  id            String   @id @default(cuid())
+  visitorId     String   @db.VarChar(36)
+  policyVersion String   @db.VarChar(64)
+  country       String   @default("") @db.VarChar(2)
+  choices       Json
+  action        String   @db.VarChar(20)
+  createdAt     DateTime @default(now())
+
+  @@index([visitorId, createdAt])
+  @@index([createdAt])
+}
+
+// The 404 monitor: one row per missing URL that visitors hit, so broken links
+// can be found and redirected.
+model NotFoundLog {
+  id         String   @id @default(cuid())
+  path       String   @unique @db.VarChar(500)
+  hits       Int      @default(1)
+  userAgent  String   @default("") @db.VarChar(300)
+  referrer   String   @default("") @db.VarChar(500)
+  resolved   Boolean  @default(false)
+  lastHitAt  DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([lastHitAt])
+}
+
+enum FormType {
+  DEMO
+  CONTACT
+  CUSTOM
+}
+
+enum CampaignType {
+  BAR
+  POPUP
+}
+
+enum SubscriberStatus {
+  PENDING
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+// A newsletter subscriber. Double opt-in: created PENDING with a confirmToken,
+// becomes ACTIVE on confirmation. Every subscriber has a stable unsubscribeToken.
+model Subscriber {
+  id               String           @id @default(cuid())
+  email            String           @unique @db.VarChar(255)
+  name             String           @default("") @db.VarChar(200)
+  status           SubscriberStatus @default(PENDING)
+  tags             Json
+  source           String           @default("") @db.VarChar(80)
+  confirmToken     String?          @db.VarChar(100)
+  unsubscribeToken String           @db.VarChar(100)
+  confirmedAt      DateTime?
+  unsubscribedAt   DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([status, createdAt])
+}
+
+enum BroadcastStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+}
+
+// A newsletter broadcast. Sent to ACTIVE subscribers matching audienceTags
+// (empty = everyone) via SMTP, in batches, with open tracking.
+model Broadcast {
+  id           String          @id @default(cuid())
+  subject      String          @db.VarChar(300)
+  preheader    String          @default("") @db.VarChar(300)
+  bodyHtml     String          @db.MediumText
+  status       BroadcastStatus @default(DRAFT)
+  audienceTags Json
+  scheduledAt  DateTime?
+  sentAt       DateTime?
+  recipients   Int             @default(0)
+  sent         Int             @default(0)
+  failed       Int             @default(0)
+  opens        Int             @default(0)
+  createdById  String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([status, scheduledAt])
+}
+
+// A promotional campaign: a sticky announcement bar/banner (BAR) or a modal /
+// corner popup (POPUP) with triggers. All presentation, trigger, targeting and
+// styling options live in `config` (validated by campaignConfigSchema).
+model Campaign {
+  id          String       @id @default(cuid())
+  name        String       @db.VarChar(200)
+  type        CampaignType @default(BAR)
+  enabled     Boolean      @default(true)
+  priority    Int          @default(0)
+  startAt     DateTime?
+  endAt       DateTime?
+  config      Json
+  views       Int          @default(0)
+  clicks      Int          @default(0)
+  dismissals  Int          @default(0)
+  createdById String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([enabled, startAt, endAt])
+}
+
+// A custom form built in the admin Form Builder. Its field definitions live in
+// `fields` (JSON, validated by formFieldsSchema). Submissions are stored in the
+// existing FormSubmission table, linked by formId.
+model Form {
+  id             String           @id @default(cuid())
+  name           String           @db.VarChar(200)
+  slug           String           @unique @db.VarChar(200)
+  description    String           @default("") @db.VarChar(600)
+  fields         Json
+  submitLabel    String           @default("Submit") @db.VarChar(80)
+  successMessage String           @default("Thanks — we’ve received your submission.") @db.VarChar(1000)
+  redirectUrl    String           @default("") @db.VarChar(2048)
+  notifyEmail    String           @default("") @db.VarChar(255)
+  enabled        Boolean          @default(true)
+  requireCaptcha Boolean          @default(false)
+  views          Int              @default(0)
+  createdById    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  submissions    FormSubmission[]
+
+  @@index([createdAt])
+}
+
+enum SubmissionStatus {
+  NEW
+  CONTACTED
+  COMPLETED
+  SPAM
+}
+
+model FormSubmission {
+  id        String           @id @default(cuid())
+  type      FormType
+  // Set for submissions from a custom Form Builder form.
+  formId    String?
+  form      Form?            @relation(fields: [formId], references: [id], onDelete: SetNull)
+  status    SubmissionStatus @default(NEW)
+  name      String           @default("")
+  email     String           @default("") @db.VarChar(255)
+  company   String           @default("")
+  data      Json
+  notes     String           @default("") @db.VarChar(4000)
+  // A salted hash, enough to spot repeat abuse without storing addresses.
+  ipHash    String           @default("")
+  userAgent String           @default("") @db.VarChar(300)
+  emailed   Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([type, status, createdAt])
+  @@index([formId, createdAt])
+  @@index([createdAt])
+}
+
+enum WebhookFormat {
+  JSON
+  SLACK
+}
+
+// An outbound webhook / integration endpoint. Fires a signed POST to `url`
+// whenever one of its subscribed `events` occurs. The URL is SSRF-guarded on
+// save and again at send time. `secret` signs the payload (HMAC-SHA256).
+model Webhook {
+  id          String            @id @default(cuid())
+  name        String            @db.VarChar(200)
+  url         String            @db.VarChar(2048)
+  format      WebhookFormat     @default(JSON)
+  secret      String            @db.VarChar(100)
+  events      Json
+  enabled     Boolean           @default(true)
+  createdById String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deliveries  WebhookDelivery[]
+
+  @@index([enabled])
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+// One attempt log for a webhook. Retried by the scheduler with backoff until
+// SUCCESS or the attempt cap is reached.
+model WebhookDelivery {
+  id          String                @id @default(cuid())
+  webhookId   String
+  webhook     Webhook               @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event       String                @db.VarChar(80)
+  status      WebhookDeliveryStatus @default(PENDING)
+  statusCode  Int?
+  payload     Json
+  response    String                @db.Text
+  error       String                @default("") @db.VarChar(1000)
+  attempts    Int                   @default(0)
+  nextAttempt DateTime?
+  createdAt   DateTime              @default(now())
+  deliveredAt DateTime?
+
+  @@index([status, nextAttempt])
+  @@index([webhookId, createdAt])
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  summary    String   @db.VarChar(300)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Backups (Backup & Restore module)
+// ---------------------------------------------------------------------------
+
+enum BackupType {
+  MANUAL
+  DAILY
+  WEEKLY
+  MONTHLY
+  PRE_RESTORE
+}
+
+enum BackupStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+// One archive on disk (a .tar.gz holding a database dump and/or uploaded
+// files), plus the bookkeeping the dashboard and the retention policy need.
+// createdById is a plain id (not a relation) so deleting a user never cascades
+// into backup history.
+model Backup {
+  id            String       @id @default(cuid())
+  name          String       @db.VarChar(255)
+  type          BackupType   @default(MANUAL)
+  status        BackupStatus @default(PENDING)
+  includesDb    Boolean      @default(true)
+  includesFiles Boolean      @default(true)
+  includesCode  Boolean      @default(false)
+  // Size of the finished archive in bytes (BigInt: archives can exceed 2GB).
+  sizeBytes     BigInt       @default(0)
+  storageDriver String       @default("local") @db.VarChar(32)
+  // Path, relative to the backup directory, of the archive on disk.
+  storageKey    String       @default("") @db.VarChar(1024)
+  // SHA-256 of the archive, verified before every restore.
+  checksum      String       @default("") @db.VarChar(128)
+  note          String       @default("") @db.VarChar(1000)
+  error         String       @default("") @db.VarChar(2000)
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  // Set while a restore is reading this archive, so it cannot be deleted.
+  restoringAt   DateTime?
+  createdById   String?
+  createdAt     DateTime     @default(now())
+
+  @@index([type, createdAt])
+  @@index([status])
+  @@index([createdAt])
+}

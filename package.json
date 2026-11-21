@@ -1,0 +1,43 @@
+{
+  "name": "nextract-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "pnpm": {
+    "overrides": {
+      "mariadb@>=3.3.0 <3.5.4": ">=3.5.4",
+      "mysql2@<3.22.0": ">=3.22.0",
+      "source-map-js@<1.2.2": ">=1.2.2",
+      "deepmerge-ts@<8.0.0": ">=8.0.0",
+      "fast-uri@>=3.0.0 <3.1.8": ">=3.1.8",
+      "@puckeditor/core>@tiptap/html": "3.31.4",
+      "@puckeditor/core>@tiptap/extension-text-align": "3.31.4",
+      "@puckeditor/core>happy-dom": "21.0.4",
+      "@typescript-eslint/typescript-estree>minimatch": "11.0.1"
+    }
+  },
+  "scripts": {
+    "dev:site": "pnpm --filter nextract dev",
+    "build:site": "pnpm --filter nextract build",
+    "start:site": "pnpm --filter nextract start",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "dev:api": "pnpm --filter @workspace/cms-api dev",
+    "dev:admin": "pnpm --filter @workspace/cms-admin dev",
+    "dev:cms": "node artifacts/cms-api/scripts/dev-all.mjs",
+    "build:admin": "pnpm --filter @workspace/cms-admin build",
+    "build:api": "pnpm --filter @workspace/cms-api build",
+    "build:cms": "node artifacts/cms-api/scripts/build-all.mjs",
+    "start:cms": "node artifacts/cms-api/scripts/start.mjs",
+    "db:push": "pnpm --filter @workspace/cms-api exec prisma db push",
+    "db:seed": "pnpm --filter @workspace/cms-api run db:seed",
+    "create-admin": "pnpm --filter @workspace/cms-api run create-admin"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6",
+    "typescript": "~5.9.3"
+  }
+}

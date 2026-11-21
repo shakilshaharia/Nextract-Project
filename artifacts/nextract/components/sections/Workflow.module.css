@@ -1,0 +1,25 @@
+/* Figma: Feature Section — #f6f6f8, padding 100/80, gap 60 */
+.section {
+  background: var(--bg-soft);
+  padding: 100px var(--gutter);
+  color: var(--color-navy);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 60px;
+  max-width: var(--container);
+  margin: 0 auto;
+}
+
+@media (max-width: 767px) {
+  .section {
+    padding-block: 72px;
+  }
+
+  .inner {
+    gap: 40px;
+  }
+}

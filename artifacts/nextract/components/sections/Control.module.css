@@ -1,0 +1,140 @@
+/* Figma: feature — padding 110/0/130, content 1478 wide, gap 72 */
+.section {
+  padding: 110px 0 130px;
+}
+
+/* 61px side margins at 1600 — tighter than the standard gutter. */
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: 72px;
+  width: min(1478px, 100% - 2 * min(var(--gutter), 40px));
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  flex: 0 1 731px;
+  font-size: 52px;
+  line-height: 60px;
+  letter-spacing: -1.5px;
+  color: var(--color-ink-strong);
+}
+
+.description {
+  flex: 0 1 731px;
+  font-size: 18px;
+  line-height: 30.6px;
+  color: var(--color-warm-gray);
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 36px;
+  min-height: 597px;
+  padding: 0 40px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 400px;
+}
+
+.itemTitle {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 30.6px;
+  color: var(--color-ink);
+}
+
+.itemDescription {
+  max-width: 356px;
+  font-size: 16px;
+  line-height: 27.2px;
+  color: var(--color-warm-gray);
+}
+
+.visual {
+  position: relative;
+  aspect-ratio: 731 / 597;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: #e8edff;
+}
+
+.visual img {
+  object-fit: cover;
+}
+
+@media (max-width: 1023px) {
+  .section {
+    padding-block: 96px;
+  }
+
+  .inner {
+    gap: 48px;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .title {
+    flex: none;
+    font-size: 44px;
+    line-height: 52px;
+    letter-spacing: -1.2px;
+  }
+
+  .description {
+    flex: none;
+  }
+
+  .panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .list {
+    min-height: 0;
+    padding: 48px 32px;
+  }
+}
+
+@media (max-width: 767px) {
+  .section {
+    padding-block: 72px;
+  }
+
+  .title {
+    font-size: 34px;
+    line-height: 41px;
+    letter-spacing: -1px;
+  }
+
+  .description {
+    font-size: 16px;
+    line-height: 27.2px;
+  }
+
+  .list {
+    padding: 36px 24px;
+    gap: 28px;
+  }
+}

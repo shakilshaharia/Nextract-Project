@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nextract CMS — Admin</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: #121b2e;
+        --line: #243049;
+        --text: #e6ecf5;
+        --muted: #8aa0bd;
+        --blue: #0082fb;
+        --blue-hover: #0b63bd;
+        --err: #ff6b6b;
+        --ok: #37d19a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      .wrap { max-width: 920px; margin: 0 auto; padding: 24px 16px; }
+      .center { min-height: 100vh; display: grid; place-items: center; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 28px;
+        width: 100%;
+        max-width: 400px;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+      .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--blue); }
+      h1 { font-size: 20px; margin: 0; }
+      p.sub { color: var(--muted); margin: 4px 0 20px; font-size: 13px; }
+      label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+      input {
+        width: 100%; padding: 11px 12px; border-radius: 9px;
+        border: 1px solid var(--line); background: #0d1626; color: var(--text); font-size: 15px;
+      }
+      input:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
+      button {
+        margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 9px;
+        background: var(--blue); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+      }
+      button:hover { background: var(--blue-hover); }
+      button:disabled { opacity: .6; cursor: default; }
+      .msg { margin-top: 14px; font-size: 13px; min-height: 18px; }
+      .msg.err { color: var(--err); }
+      .topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding-bottom: 16px; border-bottom: 1px solid var(--line); margin-bottom: 20px;
+      }
+      .topbar button { width: auto; margin: 0; padding: 8px 14px; font-size: 13px; background: #1c2740; }
+      .topbar button:hover { background: #26324f; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+      .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+      .tile h3 { margin: 0 0 6px; font-size: 14px; }
+      .tile .v { font-size: 22px; font-weight: 700; }
+      .tile .l { color: var(--muted); font-size: 12px; }
+      .pill { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 999px; background: #10351f; color: var(--ok); }
+      code { background: #0d1626; padding: 2px 6px; border-radius: 6px; color: #b9c6dc; }
+      .note { color: var(--muted); font-size: 13px; margin-top: 18px; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      const app = document.getElementById("app");
+      const api = (p, opts) => fetch(p, { credentials: "same-origin", ...opts }).then(async (r) => ({ ok: r.ok, status: r.status, body: await r.json().catch(() => ({})) }));
+
+      function loginView(err) {
+        app.innerHTML = `
+          <div class="center"><form class="card" id="f">
+            <div class="brand"><span class="dot"></span><h1>Nextract CMS</h1></div>
+            <p class="sub">Sign in to the admin backend.</p>
+            <label for="email">Email</label>
+            <input id="email" type="email" autocomplete="username" required />
+            <label for="password">Password</label>
+            <input id="password" type="password" autocomplete="current-password" required />
+            <button type="submit" id="btn">Sign in</button>
+            <div class="msg err" id="msg">${err || ""}</div>
+          </form></div>`;
+        document.getElementById("f").addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const btn = document.getElementById("btn");
+          btn.disabled = true; btn.textContent = "Signing in…";
+          const res = await api("/api/auth/login", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              email: document.getElementById("email").value,
+              password: document.getElementById("password").value,
+            }),
+          });
+          if (res.ok) return dashboard();
+          btn.disabled = false; btn.textContent = "Sign in";
+          document.getElementById("msg").textContent = res.body.error || "Login failed";
+        });
+      }
+
+      async function dashboard() {
+        const me = await api("/api/auth/me");
+        if (!me.ok) return loginView();
+        const health = await api("/health");
+        const u = me.body.user;
+        app.innerHTML = `
+          <div class="wrap">
+            <div class="topbar">
+              <div class="brand"><span class="dot"></span><h1>Nextract CMS</h1></div>
+              <button id="logout">Log out</button>
+            </div>
+            <p>Signed in as <strong>${u.name}</strong> &lt;${u.email}&gt; <span class="pill">${u.role}</span></p>
+            <div class="grid" style="margin-top:16px">
+              <div class="tile"><h3>Database</h3><div class="v">${health.body.db === "up" ? "Connected" : "Down"}</div><div class="l">local MariaDB · port 3310</div></div>
+              <div class="tile"><h3>API</h3><div class="v">Online</div><div class="l">http://localhost:4000</div></div>
+              <div class="tile"><h3>Your role</h3><div class="v">${u.role === "SUPER_ADMIN" ? "Full access" : u.role}</div><div class="l">authentication working</div></div>
+            </div>
+            <p class="note">Backend auth is live. The full WordPress-style editor (pages, resources, media,
+            menus, settings, SEO, forms) is being built in the next phases and will appear here.
+            Public data feed: <code>/api/public/bootstrap?path=/</code></p>
+          </div>`;
+        document.getElementById("logout").addEventListener("click", async () => {
+          await api("/api/auth/logout", { method: "POST" });
+          loginView();
+        });
+      }
+
+      (async () => {
+        const me = await api("/api/auth/me");
+        me.ok ? dashboard() : loginView();
+      })();
+    </script>
+  </body>
+</html>

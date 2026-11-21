@@ -1,0 +1,140 @@
+/* Figma: CTA Section — #f9fafb, 889px tall, clipped; padding 100/80 */
+.section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 64px;
+  padding: 100px var(--gutter) 0;
+  background: var(--bg-subtle);
+  color: var(--color-navy);
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.frame {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 800px);
+  width: 1600px;
+}
+
+.beams {
+  position: absolute;
+  left: -1054px;
+  top: -1145px;
+  width: 2447px;
+  height: 2510px;
+  max-width: none;
+  mix-blend-mode: plus-lighter;
+}
+
+.guides {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  max-width: 786px;
+  text-align: center;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.title {
+  max-width: 659px;
+  font-size: 52px;
+  line-height: 60px;
+  letter-spacing: -1.5px;
+}
+
+.description {
+  max-width: 641px;
+  font-size: 16px;
+  line-height: 27.2px;
+  opacity: 0.84;
+}
+
+/* Only the top 460px of the 873px app preview is visible in the design. */
+.preview {
+  position: relative;
+  width: min(1276px, 100%);
+  aspect-ratio: 1276 / 460;
+  overflow: hidden;
+}
+
+.preview img {
+  width: 100%;
+  height: auto;
+}
+
+.fades {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.fadeRight {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 214px;
+  height: 386px;
+  background: linear-gradient(270deg, #f5f6f7 0%, rgba(245, 246, 247, 0) 100%);
+}
+
+.fadeBottom {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: min(1440px, 100%);
+  height: 214px;
+  transform: translateX(-50%);
+  background: linear-gradient(0deg, #fafafb 0%, rgba(250, 250, 251, 0) 100%);
+}
+
+@media (max-width: 1279px) {
+  .guides {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .section {
+    padding-top: 72px;
+    gap: 48px;
+  }
+
+  .title {
+    font-size: 34px;
+    line-height: 41px;
+    letter-spacing: -1px;
+  }
+
+  .fadeBottom {
+    height: 45%;
+  }
+
+  .fadeRight {
+    display: none;
+  }
+}

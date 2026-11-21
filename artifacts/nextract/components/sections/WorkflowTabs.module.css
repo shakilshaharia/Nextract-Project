@@ -1,0 +1,275 @@
+.carousel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+/* Figma: tab bar — white pill, 64px, 8px padding */
+.tabbar {
+  border-radius: var(--radius-pill);
+  background: var(--color-white);
+  box-shadow:
+    inset 0 0 0 1px var(--color-border),
+    0 2px 17px rgba(0, 0, 0, 0.005),
+    0 1px 1px rgba(0, 0, 0, 0.013);
+}
+
+.tablist {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 27px;
+  height: 64px;
+  padding: 8px;
+}
+
+.tabSlot {
+  display: contents;
+}
+
+.separator {
+  flex-shrink: 0;
+  width: 1px;
+  height: 15px;
+  background: rgba(31, 63, 92, 0.19);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 48px;
+  padding: 4px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 23.8px;
+  color: var(--color-navy);
+  white-space: nowrap;
+  opacity: 0.64;
+  transition:
+    opacity 0.3s ease-in-out,
+    background-color 0.3s ease-in-out;
+}
+
+.tab[aria-selected="true"] {
+  font-weight: 600;
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(31, 63, 92, 0.06), rgba(31, 63, 92, 0.08));
+  box-shadow:
+    inset 0 0 0 1px var(--color-border),
+    0 0 1px 0.5px rgba(152, 61, 8, 0.13);
+}
+
+/* Figma: five slots in a 488px row; active card 1052px, collapsed cards 43px */
+.slots {
+  display: flex;
+  gap: 14px;
+  height: 488px;
+}
+
+.slot {
+  position: relative;
+  flex: 0 0 43px;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  cursor: pointer;
+  transition:
+    flex-grow 0.3s ease-in-out,
+    flex-basis 0.3s ease-in-out,
+    background-color 0.3s ease-in-out;
+}
+
+.slot[data-active="true"] {
+  flex: 1 1 1052px;
+  background: var(--color-white);
+  cursor: auto;
+}
+
+/* Each panel keeps its full width so content does not reflow during the transition. */
+.panel {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: max(100%, 1052px);
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease-in-out,
+    visibility 0.3s;
+}
+
+.slot[data-active="true"] .panel {
+  opacity: 1;
+  visibility: visible;
+}
+
+.panelCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 38px;
+  width: 380px;
+  margin-left: 56px;
+}
+
+.tile {
+  width: 72px;
+  height: 72px;
+}
+
+.panelText {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.panelIntro {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panelTitle {
+  font-size: 32px;
+  line-height: 40px;
+  letter-spacing: -1px;
+  color: var(--color-navy);
+}
+
+.panelDescription {
+  font-size: 16px;
+  line-height: 27.2px;
+  color: rgba(31, 63, 92, 0.84);
+}
+
+.impact {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 27.2px;
+  color: var(--color-navy);
+}
+
+.impactLabel {
+  color: var(--color-slate);
+}
+
+.illustration {
+  position: absolute;
+  top: 12px;
+  left: 494px;
+  width: 546px;
+  height: 464px;
+}
+
+@media (max-width: 1279px) {
+  .panel {
+    width: 100%;
+  }
+
+  .panelCopy {
+    flex: 0 1 380px;
+    margin-left: 40px;
+    margin-right: 24px;
+  }
+
+  .illustration {
+    position: static;
+    flex: 0 1 546px;
+    min-width: 0;
+    width: auto;
+    height: auto;
+    margin: 12px 12px 12px auto;
+    max-height: 464px;
+    object-fit: contain;
+  }
+
+  .panelTitle {
+    font-size: 28px;
+    line-height: 36px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .tabbar {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tablist {
+    justify-content: flex-start;
+    gap: 12px;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .separator {
+    display: none;
+  }
+
+  .slots {
+    height: auto;
+  }
+
+  .slot {
+    display: none;
+  }
+
+  .slot[data-active="true"] {
+    display: block;
+    flex: 1 1 auto;
+  }
+
+  .panel {
+    position: static;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 32px;
+    padding: 40px 24px 12px;
+  }
+
+  .panelCopy {
+    flex: none;
+    width: auto;
+    max-width: 560px;
+    margin: 0;
+  }
+
+  .illustration {
+    flex: none;
+    width: 100%;
+    max-width: 546px;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: 546 / 464;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 767px) {
+  .panel {
+    padding: 32px 12px 12px;
+  }
+
+  .panelCopy {
+    padding: 0 8px;
+    gap: 28px;
+  }
+
+  .panelText {
+    gap: 28px;
+  }
+
+  .panelTitle {
+    font-size: 26px;
+    line-height: 32px;
+    letter-spacing: -0.8px;
+  }
+}

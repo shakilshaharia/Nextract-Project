@@ -1,0 +1,171 @@
+.block {
+  /* Layout overrides belong to this block, not every nested block. */
+  --base-display:block;
+  --padding:initial;--margin:initial;--gap:initial;--radius:initial;
+  --display:initial;--columns:initial;--width:initial;--height:initial;
+  --shadow:initial;--background:initial;--opacity:initial;
+  --borderWidth:initial;--borderColor:initial;
+  --t-padding:initial;--t-margin:initial;--t-gap:initial;--t-display:initial;--t-columns:initial;--t-width:initial;--t-height:initial;--t-background:initial;
+  --m-padding:initial;--m-margin:initial;--m-gap:initial;--m-display:initial;--m-columns:initial;--m-width:initial;--m-height:initial;--m-background:initial;
+  --active-color: var(--color, inherit);
+  --active-background: var(--background, transparent);
+  --active-font: var(--fontSize, inherit);
+  --active-padding: var(--padding, 0);
+  --active-margin: var(--margin, 0);
+  --active-gap: var(--gap, 20px);
+  --active-align: var(--align, inherit);
+  --active-width: var(--width, auto);
+  --active-height: var(--height, 0);
+  --active-columns: var(--columns, 2);
+  --active-display: var(--display, var(--base-display, block));
+  color: var(--active-color);
+  background: var(--active-background);
+  font-size: var(--active-font);
+  font-weight: var(--fontWeight, inherit);
+  line-height: var(--lineHeight, inherit);
+  letter-spacing: var(--letterSpacing, inherit);
+  text-align: var(--active-align);
+  padding: var(--active-padding);
+  margin: var(--active-margin);
+  gap: var(--active-gap);
+  border: var(--borderWidth, 0) solid var(--borderColor, transparent);
+  border-radius: var(--radius, 0);
+  box-shadow: var(--shadow, none);
+  opacity: var(--opacity, 1);
+  width: var(--active-width);
+  min-height: var(--active-height);
+  display: var(--active-display);
+  min-width: 0;
+}
+.grid {
+  --base-display: grid;
+  grid-template-columns: repeat(var(--active-columns), minmax(0, 1fr));
+}
+.slot {display:contents!important;}
+.flex {
+  --base-display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.card {
+  background: var(--background, white);
+  box-shadow: var(--shadow, 0 8px 30px #0001);
+  border-radius: var(--radius, 16px);
+}
+.customFont :is(h1, h2, h3, h4, p) {
+  font-size: var(--active-font);
+}
+.customColor :is(h1, h2, h3, h4, p) {
+  color: var(--active-color);
+}
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: inherit;
+}
+.video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/9;
+  border: 0;
+}
+.button {
+  display: inline-block;
+  padding: 12px 26px;
+  border-radius: 999px;
+  background: var(--color-blue);
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+}
+.empty {
+  border: 1px dashed #bbb;
+  padding: 40px;
+  text-align: center;
+}
+.rich ul,
+.rich ol {
+  list-style: revert;
+  padding-left: 24px;
+}
+.rich p {
+  margin-bottom: 12px;
+}
+.rich img,
+.rich iframe {
+  max-width: 100%;
+}
+.detail,
+.tabs details {
+  padding: 16px;
+  border-bottom: 1px solid #ddd;
+}
+.detail summary,
+.tabs summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 20px;
+}
+.gallery img {
+  width: 100%;
+  height: auto;
+}
+@media (max-width: 1023px) {
+  .tabletFont :is(h1, h2, h3, h4, p) {
+    font-size: var(--active-font);
+  }
+  .tabletColor :is(h1, h2, h3, h4, p) {
+    color: var(--active-color);
+  }
+  .block {
+    --active-color: var(--t-color, var(--color, inherit));
+    --active-background: var(--t-background, var(--background, transparent));
+    --active-font: var(--t-fontSize, var(--fontSize, inherit));
+    --active-padding: var(--t-padding, var(--padding, 0));
+    --active-margin: var(--t-margin, var(--margin, 0));
+    --active-gap: var(--t-gap, var(--gap, 20px));
+    --active-align: var(--t-align, var(--align, inherit));
+    --active-width: var(--t-width, var(--width, auto));
+    --active-height: var(--t-height, var(--height, 0));
+    --active-columns: var(--t-columns, var(--columns, 2));
+    --active-display: var(
+      --t-display,
+      var(--display, var(--base-display, block))
+    );
+  }
+}
+@media (max-width: 767px) {
+  .mobileFont :is(h1, h2, h3, h4, p) {
+    font-size: var(--active-font);
+  }
+  .mobileColor :is(h1, h2, h3, h4, p) {
+    color: var(--active-color);
+  }
+  .block {
+    --active-color: var(--m-color, var(--t-color, var(--color, inherit)));
+    --active-background: var(
+      --m-background,
+      var(--t-background, var(--background, transparent))
+    );
+    --active-font: var(
+      --m-fontSize,
+      var(--t-fontSize, var(--fontSize, inherit))
+    );
+    --active-padding: var(--m-padding, var(--t-padding, var(--padding, 0)));
+    --active-margin: var(--m-margin, var(--t-margin, var(--margin, 0)));
+    --active-gap: var(--m-gap, var(--t-gap, var(--gap, 20px)));
+    --active-align: var(--m-align, var(--t-align, var(--align, inherit)));
+    --active-width: var(--m-width, var(--t-width, var(--width, auto)));
+    --active-height: var(--m-height, var(--t-height, var(--height, 0)));
+    --active-columns: var(--m-columns, 1);
+    --active-display: var(
+      --m-display,
+      var(--t-display, var(--display, var(--base-display, block)))
+    );
+  }
+}

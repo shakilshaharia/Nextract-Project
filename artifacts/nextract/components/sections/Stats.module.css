@@ -1,0 +1,87 @@
+/* Figma: benefits — 1296px wide, 100px top padding, on the page background */
+.section {
+  width: min(1296px, 100% - 2 * var(--gutter));
+  margin: 0 auto;
+  padding-top: 100px;
+}
+
+.card {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0;
+  padding: 40px 87px;
+  min-height: 206px;
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+/* Value sits above the label visually; label first in DOM so the pair reads "label: value". */
+.item {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 24px;
+  width: 190px;
+}
+
+.value {
+  margin: 0;
+  font-size: 40px;
+  line-height: 48px;
+  letter-spacing: -0.4px;
+  color: var(--color-blue);
+}
+
+.label {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 27.2px;
+  color: var(--color-ink-stat);
+}
+
+@media (max-width: 1279px) {
+  .card {
+    padding: 40px 48px;
+  }
+
+  .item {
+    width: auto;
+    flex: 1 1 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .section {
+    padding-top: 72px;
+  }
+
+  .card {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 40px;
+    padding: 40px;
+  }
+}
+
+@media (max-width: 767px) {
+  .section {
+    padding-top: 56px;
+  }
+
+  .card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 32px 24px;
+    row-gap: 32px;
+  }
+
+  .item {
+    gap: 12px;
+  }
+
+  .value {
+    font-size: 32px;
+    line-height: 40px;
+  }
+}

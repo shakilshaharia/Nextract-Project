@@ -1,0 +1,147 @@
+.form {
+  max-width: 640px;
+  margin: 0 auto;
+  font-family: var(--font-sans);
+}
+
+.description {
+  margin: 0 0 20px;
+  color: var(--color-slate, #6c7a89);
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.half {
+  grid-column: span 1;
+}
+
+@media (max-width: 560px) {
+  .half {
+    grid-column: 1 / -1;
+  }
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-navy, #1f3f5c);
+}
+
+.input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--color-border, #eaedf0);
+  border-radius: 12px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--color-navy, #1f3f5c);
+  background: var(--color-white, #fff);
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: 2px solid var(--color-blue, #0082fb);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.help {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--color-slate, #6c7a89);
+}
+
+.error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #d4183d;
+}
+
+.checkLabel,
+.radioLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-navy, #1f3f5c);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.checkLabel input,
+.radioLabel input {
+  margin-top: 3px;
+}
+
+.radios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.submit {
+  margin-top: 22px;
+  padding: 12px 26px;
+  border: none;
+  border-radius: 100px;
+  background: var(--color-blue, #0082fb);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.submit:hover {
+  opacity: 0.92;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.success {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  border-radius: 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.notice {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--bg-soft, #f6f6f8);
+  color: var(--color-slate, #6c7a89);
+  text-align: center;
+  font-size: 14px;
+}

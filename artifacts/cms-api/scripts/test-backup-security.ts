@@ -1,0 +1,110 @@
+// File restore drill: every file target is beneath a fresh temp directory.
+// No database restore is performed. Existing archives are never touched.
+import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+
+assert.notEqual(process.env.NODE_ENV, 'production');
+assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(new URL(process.env.DATABASE_URL!).hostname));
+const root = await mkdtemp(path.join(os.tmpdir(), 'nx-backup-drill-'));
+assert.ok(path.resolve(root).startsWith(path.resolve(os.tmpdir()) + path.sep));
+process.env.BACKUP_DIR = path.join(root, 'archives');
+process.env.UPLOAD_DIR = path.join(root, 'uploads');
+process.env.SITE_ROOT = path.join(root, 'site');
+process.env.SITE_PUBLIC_DIR = path.join(root, 'site', 'public');
+process.env.STORAGE_DRIVER = 'local';
+process.env.BACKUP_ENCRYPTION_KEY = randomBytes(32).toString('hex');
+const { db } = await import('../src/db.ts');
+const { startBackup, runBackupJob, restoreBackup, archivePathFor, importBackup, prepareBackupDownload } = await import('../src/lib/backup.ts');
+const { encryptBackup } = await import('../src/lib/backup-crypto.ts');
+const actor = await db.user.create({ data: { email: `backup-drill-${randomBytes(8).toString('hex')}@example.invalid`, name: 'Isolated backup drill', passwordHash: 'unusable-test-verifier', role: 'SUPER_ADMIN' } });
+let server: import('node:http').Server | undefined;
+try {
+  await mkdir(process.env.UPLOAD_DIR, { recursive: true });
+  await mkdir(process.env.SITE_PUBLIC_DIR, { recursive: true });
+  const uploaded = path.join(process.env.UPLOAD_DIR, 'drill.txt'), source = path.join(process.env.SITE_ROOT, 'drill.ts');
+  const config = path.join(process.env.SITE_ROOT, '.env');
+  await writeFile(uploaded, 'original upload'); await writeFile(source, 'original source'); await writeFile(config, 'EXAMPLE_ONLY=do-not-copy');
+  const row = await startBackup({ createdById: actor.id, includeDb: false, includeFiles: true, includeCode: true, runInBackground: false });
+  await runBackupJob(row.id);
+  const archive = await archivePathFor(row.id); assert.ok(archive); assert.ok(archive.name.endsWith('.tar.gz'));
+  const plain = archive.path;
+  const tarBin = process.platform === 'win32' ? path.join(process.env.SystemRoot ?? 'C:/Windows', 'System32', 'tar.exe') : 'tar';
+  const list = spawnSync(tarBin, ['-tzf', plain], { encoding: 'utf8', windowsHide: true });
+  assert.equal(list.status, 0, 'The decrypted archive must be readable by tar.');
+  assert.ok(list.stdout.includes('manifest.json')); assert.ok(!list.stdout.includes('/.env'));
+  const legacyFile = path.join(root, 'legacy.tar.gz.enc');
+  await encryptBackup(plain, legacyFile, process.env.BACKUP_ENCRYPTION_KEY);
+  const imported = await importBackup(plain, 'uploaded.tar.gz', actor.id);
+  assert.ok(imported.storageKey.endsWith('.tar.gz'));
+  const legacyImported = await importBackup(legacyFile, 'legacy.tar.gz.enc', actor.id);
+  assert.equal(legacyImported.checksum, imported.checksum);
+  // Simulate an existing encrypted row to verify historical downloads are decrypted.
+  const legacyKey = `${row.id}-legacy.tar.gz.enc`;
+  const { copyFile } = await import('node:fs/promises');
+  await copyFile(legacyFile, path.join(process.env.BACKUP_DIR, legacyKey));
+  const { createHash } = await import('node:crypto');
+  await db.backup.update({ where: { id: row.id }, data: { storageKey: legacyKey, checksum: createHash('sha256').update(await readFile(legacyFile)).digest('hex') } });
+  const download = await prepareBackupDownload(row.id); assert.ok(download);
+  assert.ok(download.name.endsWith('.tar.gz'));
+  assert.deepEqual(await readFile(download.path), await readFile(plain));
+  await download.cleanup();
+  const { createApp } = await import('../src/app.ts');
+  const { sha256 } = await import('../src/lib/auth.ts');
+  const token = randomBytes(32).toString('base64url');
+  await db.session.create({ data: { id: sha256(token), userId: actor.id, expiresAt: new Date(Date.now() + 600_000) } });
+  server = createApp().listen(0, '127.0.0.1'); await once(server, 'listening');
+  const address = server.address(); assert.ok(address && typeof address !== 'string');
+  const endpoint = `http://127.0.0.1:${address.port}/api/admin/backups/upload`;
+  const cookie = `nextract_session=${token}`;
+  const startBody = JSON.stringify({ name: 'http-upload.tar.gz', size: (await stat(plain)).size });
+  assert.equal((await fetch(`${endpoint}/start`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Nextract-CSRF': '1' }, body: startBody })).status, 401);
+  assert.equal((await fetch(`${endpoint}/start`, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie }, body: startBody })).status, 403);
+  const startedResponse = await fetch(`${endpoint}/start`, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie, 'X-Nextract-CSRF': '1' }, body: startBody });
+  assert.equal(startedResponse.status, 201, await startedResponse.clone().text());
+  const uploadId = (await startedResponse.json() as { item: { id: string } }).item.id;
+  const archiveBytes = await readFile(plain), split = Math.max(1, Math.floor(archiveBytes.length / 2));
+  const sendChunk = (offset: number, body: Buffer) => fetch(`${endpoint}/${uploadId}/chunk`, { method: 'POST', headers: { cookie, 'X-Nextract-CSRF': '1', 'Content-Type': 'application/octet-stream', 'X-Upload-Offset': String(offset) }, body });
+  assert.equal((await sendChunk(1, archiveBytes.subarray(0, split))).status, 409);
+  assert.equal((await sendChunk(0, archiveBytes.subarray(0, split))).status, 200);
+  assert.equal((await sendChunk(split, archiveBytes.subarray(split))).status, 200);
+  const finishResponse = await fetch(`${endpoint}/${uploadId}/finish`, { method: 'POST', headers: { cookie, 'X-Nextract-CSRF': '1' } });
+  assert.equal(finishResponse.status, 202, await finishResponse.clone().text());
+  let uploadedRow = await db.backup.findUniqueOrThrow({ where: { id: uploadId } });
+  for (let attempt = 0; uploadedRow.status === 'RUNNING' && attempt < 100; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    uploadedRow = await db.backup.findUniqueOrThrow({ where: { id: uploadId } });
+  }
+  assert.equal(uploadedRow.status, 'SUCCESS', uploadedRow.error);
+  assert.equal(uploadedRow.includesCode, true);
+  const legacyDownload = await fetch(`http://127.0.0.1:${address.port}/api/admin/backups/${row.id}/download`, { headers: { cookie } });
+  assert.equal(legacyDownload.status, 200);
+  assert.match(legacyDownload.headers.get('content-disposition')!, /\.tar\.gz/);
+  assert.ok(!legacyDownload.headers.get('content-disposition')!.includes('.enc'));
+  assert.deepEqual(Buffer.from(await legacyDownload.arrayBuffer()), await readFile(plain));
+  await writeFile(uploaded, 'changed upload'); await writeFile(source, 'changed source'); await writeFile(config, 'EXAMPLE_ONLY=keep-current');
+  const restored = await restoreBackup(imported.id, actor.id);
+  assert.equal(restored.ok, true);
+  assert.equal(await readFile(uploaded, 'utf8'), 'original upload');
+  assert.equal(await readFile(source, 'utf8'), 'original source');
+  assert.equal(await readFile(config, 'utf8'), 'EXAMPLE_ONLY=keep-current');
+  const safety = await db.backup.findUniqueOrThrow({ where: { id: restored.safetyBackupId } });
+  assert.equal(safety.status, 'SUCCESS'); assert.ok(safety.storageKey.endsWith('.tar.gz'));
+  const legacyRestore = await restoreBackup(row.id, actor.id);
+  assert.equal(legacyRestore.ok, true);
+  console.log('PASS: plain archive creation/import, legacy encrypted import and decrypted download, tar integrity, credential exclusion, uploaded file restore, configuration preservation and plain safety backup. No database restore.');
+} finally {
+  if (server) await new Promise<void>(resolve => server!.close(() => resolve()));
+  const { closeRateStore } = await import('../src/lib/rate.ts'); await closeRateStore();
+  await db.session.deleteMany({ where: { userId: actor.id } });
+  await db.backup.deleteMany({ where: { createdById: actor.id } });
+  await db.activityLog.deleteMany({ where: { userId: actor.id } });
+  await db.user.delete({ where: { id: actor.id } });
+  await db.$disconnect();
+  // Only the validated temporary tree created by this script is removed.
+  await rm(root, { recursive: true, force: true });
+}
