@@ -2,7 +2,9 @@
 // admin notification email.
 
 import { createHash } from 'node:crypto';
+import { safeVisualUrl } from '@workspace/cms-content';
 import type { Request } from 'express';
+import { z } from 'zod';
 import { db } from '../db.ts';
 import { env } from '../env.ts';
 import type { Form, FormType, Prisma } from '../generated/prisma/client.ts';
@@ -13,6 +15,11 @@ import { configuredAdminUrl } from './login-security.ts';
 import { emitEvent } from './webhooks.ts';
 
 const MIN_FILL_MS = 2500;
+
+export const formRedirectSchema = z.string().trim().pipe(safeVisualUrl).refine(
+  (value) => value === '' || value.startsWith('/') || /^https?:\/\//i.test(value),
+  'Use a local path or an HTTP(S) URL.',
+);
 
 export type SpamVerdict = { spam: boolean; silent: boolean; reason?: string };
 

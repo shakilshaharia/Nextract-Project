@@ -9,16 +9,23 @@ const EMBED_HOSTS = ['www.youtube.com', 'www.youtube-nocookie.com', 'player.vime
 const options: sanitizeHtml.IOptions = {
   allowedTags: [
     'h2', 'h3', 'h4', 'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'a',
-    'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'hr',
+    'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'hr', 'label', 'input', 'span',
+    'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
     'img', 'figure', 'figcaption', 'div', 'iframe',
   ],
   allowedAttributes: {
     a: ['href', 'target', 'rel'],
+    ul: ['data-type'],
+    li: ['data-type', 'data-checked'],
+    input: ['type', 'checked', 'disabled'],
+    th: ['colspan', 'rowspan', 'scope', 'colwidth'],
+    td: ['colspan', 'rowspan', 'colwidth'],
+    col: ['span'],
     img: ['src', 'alt', 'width', 'height', 'loading'],
     iframe: ['src', 'title', 'allow', 'allowfullscreen', 'loading', 'referrerpolicy'],
     div: ['class'],
   },
-  allowedClasses: { div: ['cms-embed'] },
+  allowedClasses: { div: ['cms-embed', 'tableWrapper'] },
   allowedSchemes: ['http', 'https', 'mailto', 'tel'],
   allowedSchemesByTag: { img: ['http', 'https'], iframe: ['https'] },
   allowProtocolRelative: false,
@@ -36,6 +43,13 @@ const options: sanitizeHtml.IOptions = {
     iframe: (tagName, attribs) => ({
       tagName,
       attribs: { ...attribs, loading: 'lazy', referrerpolicy: 'strict-origin-when-cross-origin', allowfullscreen: '' },
+    }),
+    // Task-list checkboxes are interactive in the editor, but published
+    // article HTML is read-only. Normalize every surviving input to a disabled
+    // checkbox and retain only its checked state.
+    input: (tagName, attribs) => ({
+      tagName,
+      attribs: { type: 'checkbox', disabled: '', ...('checked' in attribs ? { checked: '' } : {}) },
     }),
   },
   // A wrapper div is only meaningful around an embed; drop empty ones.

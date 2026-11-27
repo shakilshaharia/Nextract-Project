@@ -11,6 +11,7 @@ import { isMailConfigured, resetMailTransport, sendTestMail } from '../lib/mail.
 import { validateCustomCode } from '../lib/sanitize.ts';
 import { getAllSettings, getSetting, settingGroups, type SettingKey } from '../lib/settings.ts';
 import { adminBasePath, sealLoginRecaptchaSecret } from '../lib/login-security.ts';
+import { getUptimeStatus, sendUptimeTest } from '../lib/uptime.ts';
 
 export const settingsRouter = Router();
 settingsRouter.use(requireCap('settings.manage'));
@@ -31,8 +32,26 @@ settingsRouter.get('/', async (_req, res) => {
       storageDriver: env.STORAGE_DRIVER,
       recaptchaConfigured: Boolean(env.RECAPTCHA_SECRET),
       siteUrl: env.siteUrl,
+      uptime: getUptimeStatus(),
     },
   });
+});
+
+// Send a one-off test alert to the monitoring recipients (the "Send test
+// alert" button in Security → Uptime monitoring).
+settingsRouter.post('/monitoring/test', async (req, res) => {
+  const current = await getSetting('security');
+  const fromBody = Array.isArray(req.body?.recipients) ? (req.body.recipients as unknown[]).map((r) => String(r)) : null;
+  const recipients = parse(
+    z.array(z.string().trim().toLowerCase().email('One of the recipient emails is invalid.')).min(1, 'Add at least one recipient email first.').max(20),
+    fromBody ?? current.uptimeMonitor.recipients,
+  );
+  try {
+    await sendUptimeTest(recipients);
+    res.json({ ok: true, message: `Test alert sent to ${recipients.join(', ')}.` });
+  } catch (error) {
+    throw badRequest(`Could not send the test alert: ${error instanceof Error ? error.message : 'unknown error'}`);
+  }
 });
 
 // Verify the saved SMTP settings and send a test message.

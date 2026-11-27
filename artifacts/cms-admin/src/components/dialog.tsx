@@ -1,5 +1,5 @@
 import { AlertTriangle, X } from 'lucide-react';
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/format';
 import { Button, IconButton } from './ui';
 
@@ -25,6 +25,8 @@ export function Modal({
   side?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -36,6 +38,8 @@ export function Modal({
   return (
     <dialog
       ref={ref}
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -53,8 +57,8 @@ export function Modal({
         <div className={cn('flex flex-col', side ? 'h-full' : 'max-h-[calc(100dvh-32px)]')}>
           <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-5 py-4">
             <div className="min-w-0">
-              <h2 className="text-base font-semibold">{title}</h2>
-              {description && <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-500">{description}</p>}
+              <h2 id={titleId} className="text-base font-semibold">{title}</h2>
+              {description && <p id={descriptionId} className="mt-0.5 text-[13px] leading-relaxed text-zinc-500">{description}</p>}
             </div>
             <IconButton label="Close" onClick={onClose} className="-mr-1">
               <X />

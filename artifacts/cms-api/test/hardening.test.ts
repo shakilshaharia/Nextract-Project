@@ -14,6 +14,7 @@ import { assertSafeSvg, detectType } from '../src/lib/media.ts';
 import { boundedUpload } from '../src/lib/uploads.ts';
 import { csvCell } from '../src/lib/csv.ts';
 import { decryptBackup, encryptBackup, isCredentialFile } from '../src/lib/backup-crypto.ts';
+import { sanitizeRichText } from '../src/lib/sanitize.ts';
 import { limiter } from '../src/lib/rate.ts';
 
 test('new long passwords retain bytes after bcrypt limit and legacy hashes still verify', async () => {
@@ -42,6 +43,24 @@ test('SVG parser rejects namespace script, encoded URLs, external references and
 test('CSV exports neutralize formulas including leading whitespace', () => {
   for (const value of ['=1+1', ' +cmd', '\t=1+1', '\n@sum(1)', '-2', '@test']) assert.ok(csvCell(value).startsWith('"\''));
   assert.equal(csvCell('O\'Brien, "Jane"'), '"O\'Brien, ""Jane"""');
+});
+
+test('resource task lists retain checked state as read-only checkboxes', () => {
+  const clean = sanitizeRichText('<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" checked><span>Done</span></label><div><p>Approved</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox" onclick="bad()"></label><div><p>Review</p></div></li></ul>');
+  assert.match(clean, /<ul data-type="taskList">/);
+  assert.match(clean, /data-checked="true"/);
+  assert.match(clean, /type="checkbox"/);
+  assert.match(clean, /disabled/);
+  assert.match(clean, /checked/);
+  assert.doesNotMatch(clean, /onclick/);
+});
+
+test('resource tables retain safe structure and cell spans', () => {
+  const clean = sanitizeRichText('<div class="tableWrapper"><table onclick="bad()"><thead><tr><th colspan="2" scope="col">Quarter</th></tr></thead><tbody><tr><td rowspan="2">Q1<script>bad()</script></td><td>42</td></tr></tbody></table></div>');
+  assert.match(clean, /<div class="tableWrapper"><table>/);
+  assert.match(clean, /<th colspan="2" scope="col">Quarter<\/th>/);
+  assert.match(clean, /<td rowspan="2">Q1<\/td>/);
+  assert.doesNotMatch(clean, /onclick|script|bad\(\)/);
 });
 
 test('encrypted backup round trip authenticates key and ciphertext; credential files excluded', async () => {

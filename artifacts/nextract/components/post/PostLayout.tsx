@@ -14,11 +14,19 @@ import {
 } from "@/lib/posts";
 import styles from "./PostLayout.module.css";
 
-function Body({ blocks }: { blocks: readonly BodyBlock[] }) {
+export function PostBody({ blocks }: { blocks: readonly BodyBlock[] }) {
   return (
     <div className={styles.body}>
       {blocks.map((block, index) => {
         switch (block.kind) {
+          case "richText":
+            return (
+              <div
+                key={index}
+                className={styles.richText}
+                dangerouslySetInnerHTML={{ __html: block.html }}
+              />
+            );
           case "heading":
             return (
               <h2 key={index} className={styles.heading}>
@@ -69,13 +77,11 @@ function Body({ blocks }: { blocks: readonly BodyBlock[] }) {
 }
 
 /** Meta row under the title — differs per post type. */
-function MetaRow({ post }: { post: Post }) {
+export function MetaRow({ post }: { post: Post }) {
   if (post.type === "blog") {
     return (
       <div className={styles.meta}>
         <span className={styles.metaStrong}>{post.author}</span>
-        <span className={styles.metaDot} aria-hidden="true" />
-        <span>{post.authorRole}</span>
         <span className={styles.metaDot} aria-hidden="true" />
         <time>{post.date}</time>
       </div>
@@ -109,7 +115,7 @@ function relatedMeta(post: Post): string {
 }
 
 /** Key facts card in the sidebar — differs per post type. */
-function DetailsCard({ post }: { post: Post }) {
+export function DetailsCard({ post }: { post: Post }) {
   if (post.type === "event") {
     return (
       <div className={styles.sideCard}>
@@ -174,10 +180,6 @@ function DetailsCard({ post }: { post: Post }) {
           <dd>{post.author}</dd>
         </div>
         <div>
-          <dt>Role</dt>
-          <dd>{post.authorRole}</dd>
-        </div>
-        <div>
           <dt>Published</dt>
           <dd>{post.date}</dd>
         </div>
@@ -190,22 +192,21 @@ function DetailsCard({ post }: { post: Post }) {
   );
 }
 
-function Sidebar({ post, related }: { post: Post; related: Post[] }) {
-  const type = postTypeMeta[post.type];
+function Sidebar({ post, related }: { post: Post; related: NonNullable<Post["related"]> }) {
   return (
     <aside className={styles.sidebar} aria-label="More information">
       <DetailsCard post={post} />
 
       {related.length ? (
         <div className={styles.sideCard}>
-          <p className={styles.sideTitle}>More {type.labelPlural.toLowerCase()}</p>
+          <p className={styles.sideTitle}>Related resources</p>
           <ul className={styles.related}>
             {related.map((r) => (
-              <li key={r.slug} className={styles.relatedItem}>
-                <a href={postHref(r)} className={styles.relatedLink}>
+              <li key={r.href} className={styles.relatedItem}>
+                <a href={r.href} className={styles.relatedLink}>
                   {r.title}
                 </a>
-                <span className={styles.relatedMeta}>{relatedMeta(r)}</span>
+                <span className={styles.relatedMeta}>{r.meta}</span>
               </li>
             ))}
           </ul>
@@ -225,37 +226,44 @@ function Sidebar({ post, related }: { post: Post; related: Post[] }) {
   );
 }
 
+export function PostFaqJsonLd({ faqs }: { faqs: NonNullable<Post["faqs"]> }) {
+  // Structured data so the FAQs can appear as rich results in search.
+  if (faqs.length === 0) return null;
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.question,
+      acceptedAnswer: { "@type": "Answer", text: f.answer },
+    })),
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c") }}
+    />
+  );
+}
+
 export function PostLayout({ post }: { post: Post }) {
   const type = postTypeMeta[post.type];
-  const related = getPostsByType(post.type)
+  const related = post.related ?? getPostsByType(post.type)
     .filter((p) => p.slug !== post.slug)
-    .slice(0, 3);
+    .slice(0, 3)
+    .map((p) => ({ href: postHref(p), title: p.title, meta: relatedMeta(p) }));
   const faqs = (post.faqs ?? []).filter((f) => f.question.trim() && f.answer.trim());
-  // Structured data so the FAQs can appear as rich results in search.
-  const faqJsonLd = faqs.length
-    ? {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        mainEntity: faqs.map((f) => ({
-          "@type": "Question",
-          name: f.question,
-          acceptedAnswer: { "@type": "Answer", text: f.answer },
-        })),
-      }
-    : null;
 
   return (
     <>
-      {faqJsonLd ? (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-      ) : null}
+      <PostFaqJsonLd faqs={faqs} />
       <main>
         <PageHero>
           <header className={styles.header}>
             <nav className={styles.breadcrumb} aria-label="Breadcrumb">
               <a href={links.resources}>Resources</a>
               <span aria-hidden="true">/</span>
-              <a href={type.base}>{type.label}</a>
+              <span>{type.label}</span>
             </nav>
             <p className={styles.eyebrow}>
               {type.eyebrow}
@@ -279,6 +287,7 @@ export function PostLayout({ post }: { post: Post }) {
                 <figure className={styles.banner}>
                   <Image
                     src={post.image.src}
+                    unoptimized={/^https?:\/\//i.test(post.image.src)}
                     alt={post.image.alt}
                     width={post.image.width}
                     height={post.image.height}
@@ -289,7 +298,7 @@ export function PostLayout({ post }: { post: Post }) {
                 </figure>
               ) : null}
 
-              <Body blocks={post.body} />
+              <PostBody blocks={post.body} />
 
               {post.type === "event" && post.speakers.length ? (
                 <div className={styles.speakers}>

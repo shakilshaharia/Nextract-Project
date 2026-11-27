@@ -1,8 +1,20 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { boundedBody, forwardPublicPost } from '../lib/public-proxy';
-import { getCmsBootstrap, getCmsResources, managedContent } from '../lib/cms';
+import { getCmsBootstrap, getCmsResource, getCmsResources, managedContent } from '../lib/cms';
 import nextConfig from '../next.config';
+
+test('managed section edits merge typed values with existing content', () => {
+  const cms = { page: { sections: [{
+    id: 'example', type: 'managed', key: 'example', visible: true, contentJson: JSON.stringify({
+      heading: 'Edited title', media: { mode: 'video' }, enabled: false, count: 0,
+    }),
+  }] } };
+  const defaults = { heading: 'Default title', media: { mode: 'original', video: '' }, enabled: true, count: 1 };
+  assert.deepEqual(managedContent(cms, 'example', defaults), {
+    heading: 'Edited title', media: { mode: 'video', video: '' }, enabled: false, count: 0,
+  });
+});
 
 test('all Next API routes carry a search-engine noindex header', async () => {
   const rules = await nextConfig.headers?.();
@@ -26,6 +38,7 @@ test('CMS fetch failures preserve bundled content helpers; public forwarding str
     globalThis.fetch = async () => { throw new Error('simulated unavailable CMS'); };
     assert.equal(await getCmsBootstrap('/'), null);
     assert.equal(await getCmsResources(), null);
+    assert.equal(await getCmsResource('events', 'test-event'), null);
     const fallback = { heading: 'Bundled content' };
     assert.equal(managedContent(null, 'hero', fallback), fallback);
     let forwarded: RequestInit | undefined;
@@ -36,5 +49,8 @@ test('CMS fetch failures preserve bundled content helpers; public forwarding str
     assert.equal(new Headers(forwarded?.headers).has('authorization'), false);
     assert.equal(forwarded?.redirect, 'error');
     assert.ok(forwarded?.signal);
+
+    globalThis.fetch = async () => new Response(null, { status: 404 });
+    assert.equal(await getCmsResource('events', 'test-event'), undefined);
   } finally { globalThis.fetch = originalFetch; }
 });

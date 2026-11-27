@@ -1,5 +1,5 @@
 import { SiteFooter } from "@/components/layout/SiteFooter";
-import { AiAnswers, aiAnswers } from "@/components/sections/AiAnswers";
+import { AiAnswers } from "@/components/sections/AiAnswers";
 import { DemoCta } from "@/components/sections/DemoCta";
 import { Faq } from "@/components/sections/Faq";
 import { Hero } from "@/components/sections/Hero";
@@ -11,7 +11,7 @@ import { Workflow } from "@/components/sections/Workflow";
 import { CmsRichTextBlocks } from "@/components/sections/CmsRichText";
 import { cmsDemo, cmsFaqJsonLd, cmsFooterNav, cmsSocialLinks, cmsLogos, cmsMetadata, cmsNav, cmsPageJsonLd, getCmsBootstrap, managedContent, sectionIsVisible, visibleSection } from "@/lib/cms";
 import type { Metadata } from "next";
-import { demoCta, faq as fallbackFaq, hero as fallbackHero, integrations as fallbackIntegrations, solutions, testimonials as fallbackTestimonials, workflow } from "@/lib/content";
+import { aiAnswers, demoCta, faq as fallbackFaq, hero as fallbackHero, integrations as fallbackIntegrations, solutions, testimonials as fallbackTestimonials, workflow } from "@/lib/content";
 import { connection } from "next/server";
 import { VisualPage } from '@/components/visual/Renderer';
 

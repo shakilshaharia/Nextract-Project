@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '../db.ts';
 import { userCan } from '../lib/auth.ts';
 import { getSiteBootstrap } from '../lib/content.ts';
-import { assertFormOpen, saveCustomSubmission, saveSubmission, spamVerdict, verifyRecaptcha } from '../lib/forms.ts';
+import { assertFormOpen, formRedirectSchema, saveCustomSubmission, saveSubmission, spamVerdict, verifyRecaptcha } from '../lib/forms.ts';
 import { badRequest, notFound, parse } from '../lib/http.ts';
 import { getPublicResource, getPublicResources } from '../lib/posts.ts';
 import { verifyPreviewToken } from '../lib/preview.ts';
@@ -189,7 +189,7 @@ function toPublicForm(form: { slug: string; name: string; description: string; f
     fields: formFieldsSchema.parse(form.fields),
     submitLabel: form.submitLabel,
     successMessage: form.successMessage,
-    redirectUrl: form.redirectUrl,
+    redirectUrl: formRedirectSchema.safeParse(form.redirectUrl).data ?? '',
     requireCaptcha: form.requireCaptcha,
   };
 }
@@ -285,8 +285,9 @@ publicRouter.post('/forms/custom/:slug', formLimiter, async (req, res) => {
   const { values, errors } = validateFormValues(fields, body);
   if (Object.keys(errors).length) throw badRequest('Please check the highlighted fields.', errors);
   const verdict = spamVerdict({ website: typeof body.website === 'string' ? body.website : undefined, startedAt: typeof body.startedAt === 'number' ? body.startedAt : undefined, message: Object.values(values).join(' ') });
-  if (verdict.silent) return void res.json({ ok: true, successMessage: form.successMessage, redirectUrl: form.redirectUrl });
+  const redirectUrl = formRedirectSchema.safeParse(form.redirectUrl).data ?? '';
+  if (verdict.silent) return void res.json({ ok: true, successMessage: form.successMessage, redirectUrl });
   await verifyRecaptcha(typeof body.recaptchaToken === 'string' ? body.recaptchaToken : undefined, req);
   await saveCustomSubmission(req, form, values, verdict);
-  res.status(201).json({ ok: true, successMessage: form.successMessage, redirectUrl: form.redirectUrl });
+  res.status(201).json({ ok: true, successMessage: form.successMessage, redirectUrl });
 });

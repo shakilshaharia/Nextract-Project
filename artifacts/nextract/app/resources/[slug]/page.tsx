@@ -12,7 +12,7 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
   const { slug } = await params;
   const { previewToken } = await searchParams;
   const resource = await getCmsResource('resources', slug, previewToken);
-  const post = resource ? resourceToPost(resource) : getPost('blog', slug);
+  const post = resource ? resourceToPost(resource) : resource === null ? getPost('blog', slug) : undefined;
   if (!post) return {};
   return { title: resource?.seo.seoTitle || `${post.title} | Nextract`, description: resource?.seo.metaDescription || post.excerpt, alternates: { canonical: `/resources/${slug}` }, ...(previewToken ? { robots: { index: false, follow: false } } : {}) };
 }
@@ -22,7 +22,7 @@ export default async function ResourcePostPage({ params, searchParams }: { param
   const { slug } = await params;
   const { previewToken } = await searchParams;
   const resource = await getCmsResource('resources', slug, previewToken);
-  const post = resource ? resourceToPost(resource) : getPost('blog', slug);
+  const post = resource ? resourceToPost(resource) : resource === null ? getPost('blog', slug) : undefined;
   if (!post) notFound();
   return <PostLayout post={post} />;
 }

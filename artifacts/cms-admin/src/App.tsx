@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ShieldAlert } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { Redirect, Route, Router, Switch, useLocation } from 'wouter';
 import { ConfirmProvider } from '@/components/dialog';
@@ -10,20 +10,10 @@ import { ApiError } from '@/lib/api';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ActivityPage } from '@/pages/activity';
 import { ForgotPasswordPage, LoginPage, ResetPasswordPage } from '@/pages/auth';
-import { BackupsPage } from '@/pages/backups';
-import { CollectionPage } from '@/pages/collections';
 import { DashboardPage } from '@/pages/dashboard';
-import { MediaPage } from '@/pages/media';
-import { BroadcastEditorPage, BroadcastsListPage } from '@/pages/broadcasts';
-import { CampaignEditorPage, CampaignsListPage } from '@/pages/campaigns';
-import { FormEditorPage, FormsListPage } from '@/pages/forms';
 import { SubscribersPage } from '@/pages/subscribers';
 import { WebhookEditorPage, WebhooksListPage } from '@/pages/webhooks';
 import { ReviewsPage } from '@/pages/reviews';
-import { PortabilityPage } from '@/pages/portability';
-import { MenusPage } from '@/pages/menus';
-import { PageEditorPage, PagesListPage } from '@/pages/pages';
-import { PostEditorPage, PostsListPage } from '@/pages/posts';
 import { ForceTwoFactorSetup, ProfilePage } from '@/pages/profile';
 import { RedirectsPage } from '@/pages/redirects';
 import { SecurityPage } from '@/pages/security';
@@ -31,8 +21,24 @@ import { SeoPage } from '@/pages/seo';
 import { SettingsPage } from '@/pages/settings';
 import { SnippetsPage } from '@/pages/snippets';
 import { SubmissionDetailPage, SubmissionsPage } from '@/pages/submissions';
-import { TaxonomyPage } from '@/pages/taxonomy';
 import { UsersPage } from '@/pages/users';
+
+const BackupsPage = lazy(() => import('@/pages/backups').then((module) => ({ default: module.BackupsPage })));
+const CollectionPage = lazy(() => import('@/pages/collections').then((module) => ({ default: module.CollectionPage })));
+const MediaPage = lazy(() => import('@/pages/media').then((module) => ({ default: module.MediaPage })));
+const BroadcastEditorPage = lazy(() => import('@/pages/broadcasts').then((module) => ({ default: module.BroadcastEditorPage })));
+const BroadcastsListPage = lazy(() => import('@/pages/broadcasts').then((module) => ({ default: module.BroadcastsListPage })));
+const CampaignEditorPage = lazy(() => import('@/pages/campaigns').then((module) => ({ default: module.CampaignEditorPage })));
+const CampaignsListPage = lazy(() => import('@/pages/campaigns').then((module) => ({ default: module.CampaignsListPage })));
+const FormEditorPage = lazy(() => import('@/pages/forms').then((module) => ({ default: module.FormEditorPage })));
+const FormsListPage = lazy(() => import('@/pages/forms').then((module) => ({ default: module.FormsListPage })));
+const PortabilityPage = lazy(() => import('@/pages/portability').then((module) => ({ default: module.PortabilityPage })));
+const MenusPage = lazy(() => import('@/pages/menus').then((module) => ({ default: module.MenusPage })));
+const PageEditorPage = lazy(() => import('@/pages/pages').then((module) => ({ default: module.PageEditorPage })));
+const PagesListPage = lazy(() => import('@/pages/pages').then((module) => ({ default: module.PagesListPage })));
+const PostEditorPage = lazy(() => import('@/pages/posts').then((module) => ({ default: module.PostEditorPage })));
+const PostsListPage = lazy(() => import('@/pages/posts').then((module) => ({ default: module.PostsListPage })));
+const TaxonomyPage = lazy(() => import('@/pages/taxonomy').then((module) => ({ default: module.TaxonomyPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,40 +73,42 @@ function NotFound() {
 function Protected() {
   return (
     <Shell>
-      <Switch>
-        <Route path="/"><Guard caps={['dashboard.view']}><DashboardPage /></Guard></Route>
-        <Route path="/pages"><Guard caps={['pages.edit']}><PagesListPage /></Guard></Route>
-        <Route path="/pages/:id"><Guard caps={['pages.edit']}><PageEditorPage /></Guard></Route>
-        <Route path="/posts"><Guard caps={['posts.editOwn', 'posts.editAll']}><PostsListPage /></Guard></Route>
-        <Route path="/posts/:id"><Guard caps={['posts.editOwn', 'posts.editAll']}><PostEditorPage /></Guard></Route>
-        <Route path="/taxonomy"><Guard caps={['posts.editOwn', 'posts.editAll']}><TaxonomyPage /></Guard></Route>
-        <Route path="/collections/:type"><Guard caps={['collections.manage']}><CollectionPage /></Guard></Route>
-        <Route path="/media"><Guard caps={['media.upload']}><MediaPage /></Guard></Route>
-        <Route path="/menus"><Guard caps={['menus.manage']}><MenusPage /></Guard></Route>
-        <Route path="/settings"><Guard caps={['settings.manage']}><SettingsPage /></Guard></Route>
-        <Route path="/seo"><Guard caps={['settings.manage']}><SeoPage /></Guard></Route>
-        <Route path="/snippets"><Guard caps={['settings.manage']}><SnippetsPage /></Guard></Route>
-        <Route path="/security"><Guard caps={['settings.manage']}><SecurityPage /></Guard></Route>
-        <Route path="/redirects"><Guard caps={['redirects.manage']}><RedirectsPage /></Guard></Route>
-        <Route path="/forms"><Guard caps={['forms.manage']}><FormsListPage /></Guard></Route>
-        <Route path="/forms/:id"><Guard caps={['forms.manage']}><FormEditorPage /></Guard></Route>
-        <Route path="/campaigns"><Guard caps={['settings.manage']}><CampaignsListPage /></Guard></Route>
-        <Route path="/campaigns/:id"><Guard caps={['settings.manage']}><CampaignEditorPage /></Guard></Route>
-        <Route path="/subscribers"><Guard caps={['settings.manage']}><SubscribersPage /></Guard></Route>
-        <Route path="/broadcasts"><Guard caps={['settings.manage']}><BroadcastsListPage /></Guard></Route>
-        <Route path="/broadcasts/:id"><Guard caps={['settings.manage']}><BroadcastEditorPage /></Guard></Route>
-        <Route path="/webhooks"><Guard caps={['settings.manage']}><WebhooksListPage /></Guard></Route>
-        <Route path="/webhooks/:id"><Guard caps={['settings.manage']}><WebhookEditorPage /></Guard></Route>
-        <Route path="/reviews"><Guard caps={['dashboard.view']}><ReviewsPage /></Guard></Route>
-        <Route path="/portability"><Guard caps={['content.portability']}><PortabilityPage /></Guard></Route>
-        <Route path="/submissions"><Guard caps={['forms.view']}><SubmissionsPage /></Guard></Route>
-        <Route path="/submissions/:id"><Guard caps={['forms.view']}><SubmissionDetailPage /></Guard></Route>
-        <Route path="/users"><Guard caps={['users.manage']}><UsersPage /></Guard></Route>
-        <Route path="/activity"><Guard caps={['activity.view']}><ActivityPage /></Guard></Route>
-        <Route path="/backups"><Guard caps={['backups.manage']}><BackupsPage /></Guard></Route>
-        <Route path="/profile"><ProfilePage /></Route>
-        <Route><NotFound /></Route>
-      </Switch>
+      <Suspense fallback={<PageLoader label="Loading page" />}>
+        <Switch>
+          <Route path="/"><Guard caps={['dashboard.view']}><DashboardPage /></Guard></Route>
+          <Route path="/pages"><Guard caps={['pages.edit']}><PagesListPage /></Guard></Route>
+          <Route path="/pages/:id"><Guard caps={['pages.edit']}><PageEditorPage /></Guard></Route>
+          <Route path="/posts"><Guard caps={['posts.editOwn', 'posts.editAll']}><PostsListPage /></Guard></Route>
+          <Route path="/posts/:id"><Guard caps={['posts.editOwn', 'posts.editAll']}><PostEditorPage /></Guard></Route>
+          <Route path="/taxonomy"><Guard caps={['posts.editOwn', 'posts.editAll']}><TaxonomyPage /></Guard></Route>
+          <Route path="/collections/:type"><Guard caps={['collections.manage']}><CollectionPage /></Guard></Route>
+          <Route path="/media"><Guard caps={['media.upload']}><MediaPage /></Guard></Route>
+          <Route path="/menus"><Guard caps={['menus.manage']}><MenusPage /></Guard></Route>
+          <Route path="/settings"><Guard caps={['settings.manage']}><SettingsPage /></Guard></Route>
+          <Route path="/seo"><Guard caps={['settings.manage']}><SeoPage /></Guard></Route>
+          <Route path="/snippets"><Guard caps={['settings.manage']}><SnippetsPage /></Guard></Route>
+          <Route path="/security"><Guard caps={['settings.manage']}><SecurityPage /></Guard></Route>
+          <Route path="/redirects"><Guard caps={['redirects.manage']}><RedirectsPage /></Guard></Route>
+          <Route path="/forms"><Guard caps={['forms.manage']}><FormsListPage /></Guard></Route>
+          <Route path="/forms/:id"><Guard caps={['forms.manage']}><FormEditorPage /></Guard></Route>
+          <Route path="/campaigns"><Guard caps={['settings.manage']}><CampaignsListPage /></Guard></Route>
+          <Route path="/campaigns/:id"><Guard caps={['settings.manage']}><CampaignEditorPage /></Guard></Route>
+          <Route path="/subscribers"><Guard caps={['settings.manage']}><SubscribersPage /></Guard></Route>
+          <Route path="/broadcasts"><Guard caps={['settings.manage']}><BroadcastsListPage /></Guard></Route>
+          <Route path="/broadcasts/:id"><Guard caps={['settings.manage']}><BroadcastEditorPage /></Guard></Route>
+          <Route path="/webhooks"><Guard caps={['settings.manage']}><WebhooksListPage /></Guard></Route>
+          <Route path="/webhooks/:id"><Guard caps={['settings.manage']}><WebhookEditorPage /></Guard></Route>
+          <Route path="/reviews"><Guard caps={['dashboard.view']}><ReviewsPage /></Guard></Route>
+          <Route path="/portability"><Guard caps={['content.portability']}><PortabilityPage /></Guard></Route>
+          <Route path="/submissions"><Guard caps={['forms.view']}><SubmissionsPage /></Guard></Route>
+          <Route path="/submissions/:id"><Guard caps={['forms.view']}><SubmissionDetailPage /></Guard></Route>
+          <Route path="/users"><Guard caps={['users.manage']}><UsersPage /></Guard></Route>
+          <Route path="/activity"><Guard caps={['activity.view']}><ActivityPage /></Guard></Route>
+          <Route path="/backups"><Guard caps={['backups.manage']}><BackupsPage /></Guard></Route>
+          <Route path="/profile"><ProfilePage /></Route>
+          <Route><NotFound /></Route>
+        </Switch>
+      </Suspense>
     </Shell>
   );
 }

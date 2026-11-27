@@ -25,7 +25,7 @@ let onUnauthenticated: (() => void) | null = null;
 let onReauthenticate: (() => Promise<boolean>) | null = null;
 let reauthentication: Promise<boolean> | null = null;
 export function setReauthenticationHandler(handler: (() => Promise<boolean>) | null) { onReauthenticate = handler; }
-export function setUnauthenticatedHandler(handler: () => void) {
+export function setUnauthenticatedHandler(handler: (() => void) | null) {
   onUnauthenticated = handler;
 }
 

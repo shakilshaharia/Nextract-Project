@@ -51,7 +51,7 @@ export function NewsletterSignup({
         }),
       });
       const result = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(result.message || "Something went wrong. Please try again.");
+      if (!res.ok) throw new Error(result.error?.message || result.message || "Something went wrong. Please try again.");
       setMessage(result.message || "Thanks for subscribing!");
       setStatus("done");
     } catch (cause) {

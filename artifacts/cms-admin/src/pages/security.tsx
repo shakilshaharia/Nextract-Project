@@ -1,16 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SecuritySettings } from '@workspace/cms-content';
-import { KeyRound, Lock, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Activity, KeyRound, Lock, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { StringListEditor } from '@/components/list-editor';
 import { Badge, Button, Card, CardHeader, ErrorState, Notice, PageHeader, PageLoader, Switch, TextField } from '@/components/ui';
-import { errorMessage, get, put } from '@/lib/api';
+import { errorMessage, get, post, put } from '@/lib/api';
+
+// Keep a number input within range; fall back when the field is cleared or bad.
+function clampInt(raw: string, min: number, max: number, fallback: number) {
+  const n = Math.trunc(Number(raw));
+  if (!Number.isFinite(n) || raw.trim() === '') return fallback;
+  return Math.min(max, Math.max(min, n));
+}
 
 type SettingsResponse = {
   security: SecuritySettings & { hasLoginRecaptchaSecret: boolean; adminUrl: string };
   site: { googleAnalyticsId: string; googleTagManagerId: string };
-  environment: { mailConfigured: boolean; siteUrl: string; storageDriver: string };
+  environment: { mailConfigured: boolean; siteUrl: string; storageDriver: string; uptime?: { status: 'up' | 'down' | 'unknown'; lastCheckedAt: string | null; lastCode: number | null } };
 };
 type UserRow = { id: string; role: string; active: boolean; lockedUntil: string | null; totpEnabledAt: string | null; emailOtpEnabled: boolean };
 
@@ -49,6 +56,12 @@ export function SecurityPage() {
     onError: (e) => toast.error(errorMessage(e)),
   });
 
+  const testAlert = useMutation({
+    mutationFn: () => post<{ ok: boolean; message: string }>('/api/admin/settings/monitoring/test', { recipients: form?.uptimeMonitor.recipients ?? [] }),
+    onSuccess: (r) => toast.success(r.message),
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+
   if (settings.isLoading || users.isLoading) return <PageLoader />;
   if (settings.isError || !settings.data || !form) return <ErrorState error={settings.error} onRetry={() => settings.refetch()} />;
 
@@ -60,6 +73,9 @@ export function SecurityPage() {
   const https = env.siteUrl.startsWith('https://');
   const cspStatus = !form.cspEnabled ? 'Off' : form.cspReportOnly ? 'Report-only' : 'Enforced';
   const set = <K extends keyof SecuritySettings>(key: K, value: SecuritySettings[K]) => setForm((f) => (f ? { ...f, [key]: value } : f));
+  const setMon = <K extends keyof SecuritySettings['uptimeMonitor']>(key: K, value: SecuritySettings['uptimeMonitor'][K]) =>
+    setForm((f) => (f ? { ...f, uptimeMonitor: { ...f.uptimeMonitor, [key]: value } } : f));
+  const uptime = env.uptime;
 
   return (
     <>
@@ -111,6 +127,70 @@ export function SecurityPage() {
               description="Sends the account owner an email when their account is used from a device or location not seen before."
             />
             {form.alertOnNewDeviceLogin && !env.mailConfigured && <Notice tone="warn">Email is not configured yet, so alerts are written to the dev-mail folder. Set up SMTP in Settings → Email to send them.</Notice>}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Uptime monitoring" description="The server checks your site every minute and emails the people below if it goes down — and again when it recovers." />
+          <div className="space-y-5 p-5">
+            <Switch
+              checked={form.uptimeMonitor.enabled}
+              onChange={(v) => setMon('enabled', v)}
+              label="Email me when the site goes down"
+              description="After a few failed checks in a row, each recipient gets a DOWN alert, then a RECOVERED email once the site is reachable again."
+            />
+            {form.uptimeMonitor.enabled && (
+              <>
+                <StringListEditor
+                  label="Alert recipients (email)"
+                  values={form.uptimeMonitor.recipients}
+                  onChange={(v) => setMon('recipients', v)}
+                  placeholder="name@example.com"
+                  addLabel="Add recipient"
+                  max={20}
+                />
+                <TextField
+                  label="URL to check"
+                  value={form.uptimeMonitor.url}
+                  onChange={(v) => setMon('url', v.trim())}
+                  placeholder={env.siteUrl}
+                  hint={`Leave blank to check the site URL (${env.siteUrl}), or enter a specific http(s) URL.`}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <TextField
+                    label="Failed checks before alert"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={10}
+                    value={String(form.uptimeMonitor.failThreshold)}
+                    onChange={(v) => setMon('failThreshold', clampInt(v, 1, 10, 2))}
+                    hint="Checks run once a minute."
+                  />
+                  <TextField
+                    label="Repeat every (minutes) while down"
+                    type="number"
+                    inputMode="numeric"
+                    min={5}
+                    max={1440}
+                    value={String(form.uptimeMonitor.remindMinutes)}
+                    onChange={(v) => setMon('remindMinutes', clampInt(v, 5, 1440, 60))}
+                    hint="Reminder cadence during an outage."
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button variant="subtle" loading={testAlert.isPending} disabled={!form.uptimeMonitor.recipients.length} onClick={() => testAlert.mutate()}>Send test alert</Button>
+                  {uptime && uptime.status !== 'unknown' && (
+                    <Badge tone={uptime.status === 'up' ? 'green' : 'red'}>
+                      <Activity className="size-3" />
+                      {uptime.status === 'up' ? 'Site reachable' : 'Site down'}{uptime.lastCheckedAt ? ` · checked ${new Date(uptime.lastCheckedAt).toLocaleTimeString()}` : ''}
+                    </Badge>
+                  )}
+                </div>
+                {!env.mailConfigured && <Notice tone="warn">Email is not configured yet, so alerts cannot be delivered. Set up SMTP in Settings → Email first.</Notice>}
+                <Notice tone="info">This runs inside the CMS, so it catches the public site going down. If the whole server is offline it cannot email — an external monitor (e.g. UptimeRobot) is a good second layer.</Notice>
+              </>
+            )}
           </div>
         </Card>
 

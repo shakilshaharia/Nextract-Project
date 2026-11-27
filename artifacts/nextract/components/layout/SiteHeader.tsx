@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { DemoModal } from "@/components/ui/DemoModal";
 import { Logo } from "@/components/ui/Logo";
@@ -29,6 +29,20 @@ export function SiteHeader({ navItems = defaultNavItems, ctaLabel = 'Book Demo',
   const [open, setOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [demoOpen, setDemoOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      setOpenGroup(null);
+      menuButton.current?.focus();
+    };
+    document.addEventListener("keydown", dismiss);
+    return () => document.removeEventListener("keydown", dismiss);
+  }, [open]);
+
   const close = () => setOpen(false);
   const openDemo = () => {
     setOpen(false);
@@ -84,6 +98,7 @@ export function SiteHeader({ navItems = defaultNavItems, ctaLabel = 'Book Demo',
             </Button>
           )}
           <button
+            ref={menuButton}
             type="button"
             className={styles.burger}
             aria-label={open ? "Close menu" : "Open menu"}
@@ -107,6 +122,7 @@ export function SiteHeader({ navItems = defaultNavItems, ctaLabel = 'Book Demo',
           type="button"
           className={styles.backdrop}
           aria-label="Close menu"
+          tabIndex={-1}
           onClick={close}
         />
       ) : null}

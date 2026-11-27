@@ -10,10 +10,11 @@ import { invalidateContent, snapshotOf } from './content.ts';
 import { sendDueBroadcasts } from './newsletter.ts';
 import { processDueWebhooks } from './webhooks.ts';
 import { getSetting } from './settings.ts';
+import { runUptimeMonitor } from './uptime.ts';
 import { reviewVisual } from '@workspace/cms-content';
 import { validateVisual } from './visual.ts';
 import { snapshotForWorkflow } from './workflow.ts';
-import { clearOtherFeatured } from './posts.ts';
+import { clearOtherFeatured, updatePublishedResourceRedirect } from './posts.ts';
 
 export async function publishDue(now = new Date()) {
   let changed = 0;
@@ -42,7 +43,10 @@ export async function publishDue(now = new Date()) {
     const snapshot = await snapshotForWorkflow('post', post.id);
     const guard = await db.$transaction(async (tx) => {
       const result = await tx.post.updateMany({ where: { id: post.id, status: 'SCHEDULED', workflowState: 'SCHEDULED', workflowVersion: post.workflowVersion, approvedVersion: post.workflowVersion }, data: { status: 'PUBLISHED', publishedAt: post.publishAt ?? now, publishedSnapshot: snapshot, workflowState: 'PUBLISHED' } });
-      if (result.count && post.featured) await clearOtherFeatured(tx, post.id);
+      if (result.count) {
+        await updatePublishedResourceRedirect(tx, post);
+        if (post.featured) await clearOtherFeatured(tx, post.id);
+      }
       return result;
     });
     if (!guard.count) continue;
@@ -78,6 +82,7 @@ export function startScheduler() {
       await runScheduledBackups();
       await sendDueBroadcasts();
       await processDueWebhooks();
+      await runUptimeMonitor();
     } catch (error) {
       console.error('[scheduler]', (error as Error).message);
     } finally {

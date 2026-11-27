@@ -72,7 +72,7 @@ export function ContactForm({ content = contact }: { content?: typeof contact })
       });
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
-        throw new Error(result.message || "We couldn't send your message. Please try again.");
+        throw new Error(result.error?.message || result.message || "We couldn't send your message. Please try again.");
       }
       setSent(true);
       formElement.reset();

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { db } from '../db.ts';
 import { logActivity } from '../lib/activity.ts';
 import { requireCap } from '../lib/auth.ts';
+import { formRedirectSchema } from '../lib/forms.ts';
 import { badRequest, notFound, parse } from '../lib/http.ts';
 
 export const formsRouter = Router();
@@ -18,7 +19,7 @@ const formSchema = z.object({
   fields: formFieldsSchema,
   submitLabel: z.string().trim().max(80).default('Submit'),
   successMessage: z.string().trim().max(1000).default('Thanks — we’ve received your submission.'),
-  redirectUrl: z.string().trim().max(2048).default(''),
+  redirectUrl: formRedirectSchema.default(''),
   notifyEmail: z.string().trim().max(255).default(''),
   enabled: z.boolean().default(true),
   requireCaptcha: z.boolean().default(false),

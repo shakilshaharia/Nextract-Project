@@ -1,26 +1,25 @@
 import type { CmsResource } from './cms';
 import type { BodyBlock, Post } from './posts';
 
-function plain(value: string) {
-  return value.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
-}
-
 function htmlBlocks(html: string): BodyBlock[] {
-  const blocks: BodyBlock[] = [];
-  for (const match of html.matchAll(/<(h[2-4]|p|blockquote|li)[^>]*>([\s\S]*?)<\/\1>/gi)) {
-    const tag = match[1].toLowerCase();
-    const text = plain(match[2]);
-    if (!text) continue;
-    if (tag.startsWith('h')) blocks.push({ kind: 'heading', text });
-    else if (tag === 'blockquote') blocks.push({ kind: 'quote', text });
-    else if (tag === 'li') blocks.push({ kind: 'list', items: [text] });
-    else blocks.push({ kind: 'paragraph', text });
-  }
-  return blocks.length ? blocks : html.trim() ? [{ kind: 'paragraph', text: plain(html) }] : [];
+  const sanitizedHtml = html.trim();
+  // The CMS API sanitizes resource HTML on every write. Keep that safe markup
+  // intact here so inline images, links, lists and text formatting survive the
+  // API-to-website conversion instead of being flattened to plain text.
+  return sanitizedHtml ? [{ kind: 'richText', html: sanitizedHtml }] : [];
 }
 
 export function resourceToPost(resource: CmsResource): Post {
   const image = resource.cover ? { src: resource.cover.src, alt: resource.cover.alt, width: 1600, height: 900 } : undefined;
+  const related = resource.related?.map((item) => ({
+    href: item.path,
+    title: item.title,
+    meta: item.type === 'EVENT'
+      ? 'Event'
+      : item.type === 'USE_CASE'
+        ? ['Success story', item.useCase?.industry].filter(Boolean).join(' · ')
+        : ['Blog', item.readingMinutes ? `${item.readingMinutes} min read` : null].filter(Boolean).join(' · '),
+  }));
   if (resource.type === 'EVENT') {
     const event = resource.event!;
     const starts = new Date(event.startsAt);
@@ -32,6 +31,7 @@ export function resourceToPost(resource: CmsResource): Post {
     return {
       type: 'event', slug: resource.slug, title: resource.title, excerpt: resource.summary, kicker: 'Event', image, body,
       faqs: resource.faqs ?? [],
+      related,
       format: event.format,
       date: starts.toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric', timeZone: event.timeZone }),
       time: starts.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit', timeZone: event.timeZone }),
@@ -53,6 +53,7 @@ export function resourceToPost(resource: CmsResource): Post {
       results: useCase.verifiedOutcomes.map((label) => ({ value: '✓', label })),
       body: resource.html.trim() ? htmlBlocks(resource.html) : fallbackBody,
       faqs: resource.faqs ?? [],
+      related,
     };
   }
   return {
@@ -61,5 +62,6 @@ export function resourceToPost(resource: CmsResource): Post {
     date: new Date(resource.publishedAt).toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }),
     body: htmlBlocks(resource.html),
     faqs: resource.faqs ?? [],
+    related,
   };
 }

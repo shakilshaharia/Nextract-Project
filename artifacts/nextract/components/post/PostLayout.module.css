@@ -135,6 +135,243 @@
   margin-top: 20px;
 }
 
+/* HTML from the resource editor is sanitized by the CMS API before it is
+   published. Style its native elements here while preserving links and media. */
+.richText {
+  font-size: 18px;
+  line-height: 32px;
+  color: rgba(31, 63, 92, 0.86);
+}
+
+.richText :global(p),
+.richText :global(ul),
+.richText :global(ol),
+.richText :global(blockquote),
+.richText :global(pre),
+.richText :global(figure),
+.richText :global(.cms-embed) {
+  margin: 20px 0 0;
+}
+
+.richText > :global(:first-child) {
+  margin-top: 0;
+}
+
+.richText :global(h2),
+.richText :global(h3),
+.richText :global(h4) {
+  margin: 44px 0 0;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: var(--color-navy);
+}
+
+.richText :global(h2) {
+  font-size: 26px;
+  line-height: 34px;
+}
+
+.richText :global(h3) {
+  font-size: 22px;
+  line-height: 30px;
+}
+
+.richText :global(h4) {
+  font-size: 19px;
+  line-height: 27px;
+}
+
+.richText :global(a) {
+  color: var(--color-blue);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.richText :global(a:hover) {
+  text-decoration-thickness: 2px;
+}
+
+.richText :global(ul),
+.richText :global(ol) {
+  padding-left: 26px;
+}
+
+.richText :global(ul) {
+  list-style: disc;
+}
+
+.richText :global(ol) {
+  list-style: decimal;
+}
+
+.richText :global(ul[data-type="taskList"]) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.richText :global(ul[data-type="taskList"] li) {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.richText :global(ul[data-type="taskList"] li > label) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 32px;
+}
+
+.richText :global(ul[data-type="taskList"] input[type="checkbox"]) {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 2px solid var(--color-blue);
+  border-radius: 4px;
+  background: var(--color-white);
+  opacity: 1;
+}
+
+.richText :global(ul[data-type="taskList"] input[type="checkbox"]:checked) {
+  border-color: var(--color-blue);
+  background-color: var(--color-blue);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.4' d='m3.2 8.2 3 3.1 6.6-7'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+}
+
+.richText :global(ul[data-type="taskList"] li > label span) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.richText :global(ul[data-type="taskList"] li > div) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.richText :global(ul[data-type="taskList"] li > div > p) {
+  margin: 0;
+}
+
+.richText :global(li + li) {
+  margin-top: 8px;
+}
+
+.richText :global(li::marker) {
+  color: var(--color-blue);
+}
+
+.richText :global(blockquote) {
+  padding: 4px 0 4px 28px;
+  border-left: 3px solid var(--color-blue);
+  font-family: var(--font-serif);
+  font-size: 24px;
+  line-height: 34px;
+  color: var(--color-navy);
+}
+
+.richText :global(img) {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 36px 0;
+  border-radius: var(--radius-sm, 16px);
+  background: #eef4fb;
+}
+
+.richText :global(figure img) {
+  margin: 0;
+}
+
+.richText :global(figcaption) {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-slate);
+}
+
+.richText :global(.cms-embed) {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-sm, 16px);
+  background: #0b1624;
+}
+
+.richText :global(.cms-embed iframe) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.richText :global(pre) {
+  overflow-x: auto;
+  padding: 18px;
+  border-radius: 12px;
+  background: #0b1624;
+  color: #fff;
+}
+
+.richText :global(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.richText :global(.tableWrapper) {
+  max-width: 100%;
+  margin: 32px 0;
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
+.richText :global(table) {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.richText :global(th),
+.richText :global(td) {
+  padding: 12px 14px;
+  border: 1px solid #cddbea;
+  vertical-align: top;
+  text-align: left;
+}
+
+.richText :global(th) {
+  background: #eaf4ff;
+  font-weight: 600;
+  color: var(--color-navy);
+}
+
+.richText :global(th p),
+.richText :global(td p) {
+  margin: 0;
+}
+
+.richText > :global(table) {
+  display: block;
+  max-width: 100%;
+  margin: 32px 0;
+  overflow-x: auto;
+}
+
 .heading {
   margin: 44px 0 0;
   font-size: 26px;
@@ -393,12 +630,18 @@
   }
 
   .paragraph,
-  .list li {
+  .list li,
+  .richText {
     font-size: 16px;
     line-height: 27px;
   }
 
   .heading {
+    font-size: 22px;
+    line-height: 30px;
+  }
+
+  .richText :global(h2) {
     font-size: 22px;
     line-height: 30px;
   }

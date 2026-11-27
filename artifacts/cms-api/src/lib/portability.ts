@@ -5,7 +5,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import TurndownService from 'turndown';
 import {
   clientLogoSchema, faqSchema, isReservedPageSlug, metricSchema, productSchema,
-  sectionsSchema, seoSchema, seoSettingsSchema, slugPattern, slugify, urlSchema, solutionsSchema,
+  sectionsSchema, seoSchema, seoSettingsSchema, slugPattern, slugify, urlSchema, solutionsSchema, postFaqsSchema,
   testimonialSchema, type Seo,
 } from '@workspace/cms-content';
 import { z } from 'zod';
@@ -24,7 +24,7 @@ export type ImportFile = { originalname: string; buffer: Buffer };
 const titleSchema = z.string().trim().min(1).max(255);
 const slugSchema = z.string().trim().toLowerCase().min(1).max(100).regex(slugPattern);
 const pageSchema = z.object({ title: titleSchema, slug: slugSchema.max(80), excerpt: z.string().max(600).default(''), featuredImage: urlSchema.default(''), template: z.enum(['home', 'default', 'resources']).default('default'), sections: sectionsSchema, seo: seoSchema.default(seoSchema.parse({})), visualDraft: z.unknown().optional() });
-const postSchema = z.object({ title: titleSchema, slug: slugSchema, type: z.enum(['BLOG', 'USE_CASE', 'EVENT']).default('BLOG'), excerpt: z.string().max(600).default(''), featuredImage: urlSchema.default(''), featuredImageAlt: z.string().max(300).default(''), featured: z.boolean().default(false), contentHtml: z.string().max(500_000).default(''), contentJson: z.record(z.string(), z.unknown()).default({ type: 'doc', content: [] }), seo: seoSchema.default(seoSchema.parse({})), solutions: solutionsSchema, details: z.record(z.string(), z.unknown()).default({}), categorySlugs: z.array(slugSchema).max(20).default([]), tagSlugs: z.array(slugSchema).max(40).default([]), relatedSlugs: z.array(slugSchema).max(6).default([]) });
+const postSchema = z.object({ title: titleSchema, slug: slugSchema, type: z.enum(['BLOG', 'USE_CASE', 'EVENT']).default('BLOG'), excerpt: z.string().max(600).default(''), featuredImage: urlSchema.default(''), featuredImageAlt: z.string().max(300).default(''), featured: z.boolean().default(false), contentHtml: z.string().max(500_000).default(''), contentJson: z.record(z.string(), z.unknown()).default({ type: 'doc', content: [] }), seo: seoSchema.default(seoSchema.parse({})), solutions: solutionsSchema, details: z.record(z.string(), z.unknown()).default({}), faqs: postFaqsSchema, categorySlugs: z.array(slugSchema).max(20).default([]), tagSlugs: z.array(slugSchema).max(40).default([]), relatedSlugs: z.array(slugSchema).max(6).default([]) });
 const termSchema = z.object({ name: z.string().trim().min(1).max(80), slug: slugSchema, description: z.string().max(400).default('') });
 const mediaSchema = z.object({ url: z.string().max(2048).refine((v) => /^https?:\/\//.test(v) || /^\/(?!\/)/.test(v)), filename: z.string().max(255).default('imported-file'), mimeType: z.string().max(100).default('application/octet-stream'), kind: z.enum(['image', 'video', 'document']).default('image'), width: z.number().int().positive().max(100000).nullable().optional(), height: z.number().int().positive().max(100000).nullable().optional(), title: z.string().max(255).default(''), alt: z.string().max(500).default(''), caption: z.string().max(500).default(''), description: z.string().max(2000).default('') });
 const menuLink = z.string().max(500).refine((v) => /^(?:\/(?!\/)|#|https?:\/\/|mailto:|tel:)/i.test(v));
@@ -92,7 +92,7 @@ function fromMarkdown(text: string, source: string): Candidate[] {
     const kind: PortableKind = meta.kind === 'page' ? 'page' : 'post';
     return candidate(kind, kind === 'page'
       ? { title, slug, excerpt: String(meta.excerpt ?? '').slice(0, 600), featuredImage: meta.featuredImage ?? '', template: meta.template ?? 'default', sections: Array.isArray(meta.sections) ? meta.sections : [{ id: 'intro', type: 'pageIntro', visible: true, eyebrow: '', heading: title, lede: '' }, { id: 'body', type: 'richText', visible: true, html }], seo }
-      : { title, slug, type: ['BLOG', 'USE_CASE', 'EVENT'].includes(String(meta.type)) ? meta.type : 'BLOG', excerpt: String(meta.excerpt ?? plainText(html)).slice(0, 600), featuredImage: meta.featuredImage ?? '', featuredImageAlt: meta.featuredImageAlt ?? '', contentHtml: html, contentJson: { type: 'doc', content: [] }, categorySlugs: Array.isArray(meta.categories) ? meta.categories : [], tagSlugs: Array.isArray(meta.tags) ? meta.tags : [], solutions: Array.isArray(meta.solutions) ? meta.solutions : [], details: meta.details && typeof meta.details === 'object' ? meta.details : {}, relatedSlugs: Array.isArray(meta.relatedSlugs) ? meta.relatedSlugs : [], seo }, source, index);
+      : { title, slug, type: ['BLOG', 'USE_CASE', 'EVENT'].includes(String(meta.type)) ? meta.type : 'BLOG', excerpt: String(meta.excerpt ?? plainText(html)).slice(0, 600), featuredImage: meta.featuredImage ?? '', featuredImageAlt: meta.featuredImageAlt ?? '', contentHtml: html, contentJson: { type: 'doc', content: [] }, categorySlugs: Array.isArray(meta.categories) ? meta.categories : [], tagSlugs: Array.isArray(meta.tags) ? meta.tags : [], solutions: Array.isArray(meta.solutions) ? meta.solutions : [], details: meta.details && typeof meta.details === 'object' ? meta.details : {}, relatedSlugs: Array.isArray(meta.relatedSlugs) ? meta.relatedSlugs : [], faqs: meta.faqs, seo }, source, index);
   });
 }
 
@@ -174,7 +174,7 @@ export async function contentExport() {
   return {
     format: 'nextract-content', version: 1, exportedAt: new Date().toISOString(),
     pages: pages.map((p) => ({ title: p.title, slug: p.slug, excerpt: p.excerpt, featuredImage: p.featuredImage, template: p.template, sections: parseSections(p.sections), seo: parseSeo(p.seo), visualDraft: p.visualDraft, sourceStatus: p.status })),
-    posts: posts.map((p) => ({ title: p.title, slug: p.slug, type: p.type, excerpt: p.excerpt, featuredImage: p.featuredImage, featuredImageAlt: p.featuredImageAlt, featured: p.featured, contentHtml: p.contentHtml, contentJson: p.contentJson, seo: parseSeo(p.seo), solutions: p.solutions ?? [], details: p.details ?? {}, categorySlugs: p.categories.map((c) => c.slug), tagSlugs: p.tags.map((t) => t.slug), relatedSlugs: Array.isArray(p.relatedIds) ? p.relatedIds.map((id) => postSlugs.get(String(id))).filter(Boolean) : [], sourceStatus: p.status })),
+    posts: posts.map((p) => ({ title: p.title, slug: p.slug, type: p.type, excerpt: p.excerpt, featuredImage: p.featuredImage, featuredImageAlt: p.featuredImageAlt, featured: p.featured, contentHtml: p.contentHtml, contentJson: p.contentJson, seo: parseSeo(p.seo), solutions: p.solutions ?? [], details: p.details ?? {}, faqs: p.faqs ?? [], categorySlugs: p.categories.map((c) => c.slug), tagSlugs: p.tags.map((t) => t.slug), relatedSlugs: Array.isArray(p.relatedIds) ? p.relatedIds.map((id) => postSlugs.get(String(id))).filter(Boolean) : [], sourceStatus: p.status })),
     taxonomy: { categories: categories.map(({ name, slug, description }) => ({ name, slug, description })), tags: tags.map(({ name, slug }) => ({ name, slug })) },
     collections: { metrics: metrics.map(({ value, label, order, published }) => ({ value, label, order, published })), testimonials: testimonials.map(({ quote, role, segment, outcome, explanation, order, published }) => ({ quote, role, segment, outcome, explanation, order, published })), faqs: faqs.map(({ question, answer, order, published }) => ({ question, answer, order, published })), logos: logos.map(({ name, imageUrl, legacyMark, order, published }) => ({ name, imageUrl, legacyMark, order, published })), products: products.map(({ name, kicker, anchorId, introTitle, introBody, bridge, ctaLabel, features, order, published }) => ({ name, kicker, anchorId, introTitle, introBody, bridge, ctaLabel, features, order, published })) },
     menus: menus.map((m) => ({ location: m.location, ctaEnabled: m.ctaEnabled, ctaLabel: m.ctaLabel, items: menuTree(m.items) })),
@@ -185,8 +185,13 @@ export async function contentExport() {
 
 export function markdownExport(data: Awaited<ReturnType<typeof contentExport>>, scope: 'pages' | 'posts') {
   const turndown = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+  // Keep table spans and editor checkboxes in an importable HTML block.
+  turndown.addRule('richTextWidgets', {
+    filter: (node) => node.nodeName === 'TABLE' || (node.nodeName === 'UL' && node.getAttribute('data-type') === 'taskList'),
+    replacement: (_content, node) => `\n\n${node.outerHTML}\n\n`,
+  });
   const docs = scope === 'pages' ? data.pages.map((p) => ({ kind: 'page', title: p.title, slug: p.slug, excerpt: p.excerpt, featuredImage: p.featuredImage, template: p.template, sections: p.sections, seo: p.seo, body: p.sections.filter((s) => s.type === 'richText').map((s) => s.html).join('\n\n') }))
-    : data.posts.map((p) => ({ kind: 'post', title: p.title, slug: p.slug, type: p.type, excerpt: p.excerpt, featuredImage: p.featuredImage, featuredImageAlt: p.featuredImageAlt, categories: p.categorySlugs, tags: p.tagSlugs, solutions: p.solutions, details: p.details, relatedSlugs: p.relatedSlugs, seo: p.seo, body: p.contentHtml }));
+    : data.posts.map((p) => ({ kind: 'post', title: p.title, slug: p.slug, type: p.type, excerpt: p.excerpt, featuredImage: p.featuredImage, featuredImageAlt: p.featuredImageAlt, categories: p.categorySlugs, tags: p.tagSlugs, solutions: p.solutions, details: p.details, faqs: p.faqs, relatedSlugs: p.relatedSlugs, seo: p.seo, body: p.contentHtml }));
   return docs.map(({ body, ...meta }) => `---\n${stringifyYaml(meta)}---\n\n${turndown.turndown(body)}`).join('\n<!-- nextract-document -->\n');
 }
 

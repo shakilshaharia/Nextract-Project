@@ -23,7 +23,7 @@ export default async function ResourcesPage() {
   const intro = pageIntro(cms, resourcesPage);
   const nav = cmsNav(cms);
   const typeLabel = { BLOG: "Blog", USE_CASE: "Success Stories", EVENT: "Events" } as const;
-  const library = cmsResources?.length ? {
+  const library = cmsResources ? {
     ...resourcesPage,
     filters: ["All", "Blog", "Success Stories", "Events"],
     items: cmsResources.map((item) => ({

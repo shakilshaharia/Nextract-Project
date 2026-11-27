@@ -23,7 +23,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const { previewToken } = await searchParams;
   const resource = await getCmsResource("success-stories", slug, previewToken);
-  const post = resource ? resourceToPost(resource) : getPost("success-story", slug);
+  const post = resource ? resourceToPost(resource) : resource === null ? getPost("success-story", slug) : undefined;
   if (!post) return {};
   return {
     title: `${post.title} | Nextract Success Stories`,
@@ -38,7 +38,7 @@ export default async function SuccessStoryPage({ params, searchParams }: { param
   const { previewToken } = await searchParams;
   await connection();
   const resource = await getCmsResource("success-stories", slug, previewToken);
-  const post = resource ? resourceToPost(resource) : getPost("success-story", slug);
+  const post = resource ? resourceToPost(resource) : resource === null ? getPost("success-story", slug) : undefined;
   if (!post) notFound();
   return <PostLayout post={post} />;
 }

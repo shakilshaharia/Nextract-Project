@@ -6,7 +6,8 @@ import { Stats } from "../sections/Stats";
 import { Workflow } from "../sections/Workflow";
 import { Solutions } from "../sections/Solutions";
 import { Integrations } from "../sections/Integrations";
-import { AiAnswers, aiAnswers } from "../sections/AiAnswers";
+import { AiAnswers } from "../sections/AiAnswers";
+import { aiAnswers } from "@/lib/content";
 import { Testimonials } from "../sections/Testimonials";
 import { Faq } from "../sections/Faq";
 import { DemoCta } from "../sections/DemoCta";
@@ -418,7 +419,7 @@ export function migratePage(
     add("RegisterSection", "registerSection");
   } else if (slug === "resources") {
     intro(pages.resourcesPage, "left");
-    const content = resources?.length
+    const content = resources
       ? {
           ...pages.resourcesPage,
           filters: ["All", "Blog", "Success Stories", "Events"],

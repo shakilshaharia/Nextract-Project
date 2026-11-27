@@ -37,7 +37,7 @@ export function RegisterSection({ content = registerSection }: { content?: typeo
       });
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
-        throw new Error(result.message || "We couldn't send your request. Please try again.");
+        throw new Error(result.error?.message || result.message || "We couldn't send your request. Please try again.");
       }
       setSubmitted(true);
       formElement.reset();

@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { formFieldsSchema } from "@workspace/cms-content";
+import { formRedirectSchema } from "../src/lib/forms.ts";
+
+test("custom form redirects accept local and HTTPS destinations only with safe URL syntax", () => {
+  assert.equal(formRedirectSchema.parse(" /thank-you "), "/thank-you");
+  assert.equal(formRedirectSchema.parse("https://example.invalid/thank-you"), "https://example.invalid/thank-you");
+  assert.equal(formRedirectSchema.safeParse("//example.invalid").success, false);
+  assert.equal(formRedirectSchema.safeParse("ftp://example.invalid").success, false);
+});
 
 test("formFieldsSchema accepts a valid field set and applies defaults", () => {
   const parsed = formFieldsSchema.parse([

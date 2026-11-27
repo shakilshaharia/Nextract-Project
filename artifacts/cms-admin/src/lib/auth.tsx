@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, type ReactNode } from 'react';
-import { ApiError, get, post, setUnauthenticatedHandler } from './api';
+import { toast } from 'sonner';
+import { ApiError, errorMessage, get, post, setUnauthenticatedHandler } from './api';
 import type { Me } from './types';
 import { Reauthenticate } from '@/components/reauthenticate';
 
@@ -37,14 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Any 401 from a data request means the session ended (expired, revoked,
-  // password changed elsewhere): drop to the sign-in screen.
-  useEffect(() => {
-    setUnauthenticatedHandler(() => {
-      queryClient.setQueryData(['me'], { user: null, twoFactorRequired: false });
-    });
-  }, [queryClient]);
-
   // Drop every cached response except the signed-in user. clear() would also
   // detach the live ['me'] query from the component watching it, leaving the
   // app showing the previous user (or none) until a full reload.
@@ -55,6 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [queryClient],
   );
+
+  // An expired or revoked session must also evict its private cached data.
+  useEffect(() => {
+    setUnauthenticatedHandler(() => resetCache(null));
+    return () => setUnauthenticatedHandler(null);
+  }, [resetCache]);
 
   const signIn = useCallback(
     async (email: string, password: string, recaptchaToken?: string): Promise<SignInResult> => {
@@ -76,8 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
-    await post('/api/auth/logout').catch(() => undefined);
-    resetCache(null);
+    try {
+      await post('/api/auth/logout');
+      resetCache(null);
+    } catch (error) {
+      toast.error('Could not sign out', { description: errorMessage(error) });
+    }
   }, [resetCache]);
 
   const user = me.data?.user ?? null;

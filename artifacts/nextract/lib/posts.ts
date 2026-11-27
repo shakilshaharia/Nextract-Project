@@ -3,6 +3,7 @@
  */
 
 export type BodyBlock =
+  | { kind: "richText"; html: string }
   | { kind: "heading"; text: string }
   | { kind: "paragraph"; text: string }
   | { kind: "list"; items: string[] }
@@ -20,6 +21,7 @@ type BasePost = {
   body: BodyBlock[];
   /** Optional FAQ accordion shown below the body. */
   faqs?: { question: string; answer: string }[];
+  related?: { href: string; title: string; meta: string }[];
 };
 
 export type BlogPost = BasePost & {
@@ -50,7 +52,7 @@ export type EventPost = BasePost & {
 export type Post = BlogPost | SuccessStoryPost | EventPost;
 
 export const postTypeMeta = {
-  blog: { label: "Blog", labelPlural: "Blogs", base: "/blog", eyebrow: "Blog" },
+  blog: { label: "Blog", labelPlural: "Blogs", base: "/resources", eyebrow: "Blog" },
   "success-story": {
     label: "Success Story",
     labelPlural: "Success Stories",

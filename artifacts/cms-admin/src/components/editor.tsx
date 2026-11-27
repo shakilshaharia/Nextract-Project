@@ -1,4 +1,6 @@
 import Image from '@tiptap/extension-image';
+import { TaskItem, TaskList } from '@tiptap/extension-list';
+import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, Node, useEditor, useEditorState, type Editor, type JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -13,12 +15,14 @@ import {
   Italic,
   Link as LinkIcon,
   List,
+  ListChecks,
   ListOrdered,
   Minus,
   Pilcrow,
   Quote,
   Redo2,
   Strikethrough,
+  Table2,
   Underline,
   Undo2,
   Unlink,
@@ -111,7 +115,7 @@ function ToolButton({ label, active, disabled, onClick, children }: { label: str
 
 const Divider = () => <span className="mx-1 h-5 w-px bg-zinc-200" aria-hidden="true" />;
 
-function Toolbar({ editor, onLink, onImage, onEmbed }: { editor: Editor; onLink: () => void; onImage: () => void; onEmbed: () => void }) {
+function Toolbar({ editor, onLink, onImage, onEmbed, onTable }: { editor: Editor; onLink: () => void; onImage: () => void; onEmbed: () => void; onTable: () => void }) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -126,6 +130,8 @@ function Toolbar({ editor, onLink, onImage, onEmbed }: { editor: Editor; onLink:
       link: e.isActive('link'),
       bullet: e.isActive('bulletList'),
       ordered: e.isActive('orderedList'),
+      task: e.isActive('taskList'),
+      table: e.isActive('table'),
       quote: e.isActive('blockquote'),
       code: e.isActive('codeBlock'),
       canUndo: e.can().undo(),
@@ -150,10 +156,12 @@ function Toolbar({ editor, onLink, onImage, onEmbed }: { editor: Editor; onLink:
       <Divider />
       <ToolButton label="Bulleted list" active={state.bullet} onClick={() => chain().toggleBulletList().run()}><List /></ToolButton>
       <ToolButton label="Numbered list" active={state.ordered} onClick={() => chain().toggleOrderedList().run()}><ListOrdered /></ToolButton>
+      <ToolButton label="Checklist" active={state.task} onClick={() => chain().toggleTaskList().run()}><ListChecks /></ToolButton>
       <ToolButton label="Quote" active={state.quote} onClick={() => chain().toggleBlockquote().run()}><Quote /></ToolButton>
       <ToolButton label="Code block" active={state.code} onClick={() => chain().toggleCodeBlock().run()}><Code2 /></ToolButton>
       <ToolButton label="Divider" onClick={() => chain().setHorizontalRule().run()}><Minus /></ToolButton>
       <Divider />
+      <ToolButton label={state.table ? 'Edit table' : 'Insert table'} active={state.table} onClick={onTable}><Table2 /></ToolButton>
       <ToolButton label="Insert image" onClick={onImage}><ImageIcon /></ToolButton>
       <ToolButton label="Embed YouTube or Vimeo video" onClick={onEmbed}><Film /></ToolButton>
       <span className="ml-auto flex">
@@ -182,6 +190,7 @@ export function RichTextEditor({
   const [linkOpen, setLinkOpen] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
   const [embedOpen, setEmbedOpen] = useState(false);
+  const [tableOpen, setTableOpen] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -190,6 +199,12 @@ export function RichTextEditor({
         link: { openOnClick: false, autolink: true, defaultProtocol: 'https', HTMLAttributes: { rel: null, target: null } },
       }),
       Image.configure({ inline: false, allowBase64: false }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: true, renderWrapper: true, lastColumnResizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
       Embed,
       Placeholder.configure({ placeholder }),
     ],
@@ -206,7 +221,7 @@ export function RichTextEditor({
   return (
     <div>
       <div className={cn('rounded-xl bg-white shadow-sm ring-1 ring-zinc-200', error && 'ring-red-500')}>
-        <Toolbar editor={editor} onLink={() => setLinkOpen(true)} onImage={() => setImageOpen(true)} onEmbed={() => setEmbedOpen(true)} />
+        <Toolbar editor={editor} onLink={() => setLinkOpen(true)} onImage={() => setImageOpen(true)} onEmbed={() => setEmbedOpen(true)} onTable={() => setTableOpen(true)} />
         <EditorContent editor={editor} />
       </div>
       {error && <p className="mt-1.5 text-xs text-red-600" role="alert">{error}</p>}
@@ -220,7 +235,81 @@ export function RichTextEditor({
         onSelect={(item) => editor.chain().focus().setImage({ src: item.url, alt: item.alt || '' }).run()}
       />
       <EmbedDialog open={embedOpen} onClose={() => setEmbedOpen(false)} onInsert={(src) => editor.chain().focus().setEmbed(src).run()} />
+      <TableDialog open={tableOpen} editor={editor} onClose={() => setTableOpen(false)} />
     </div>
+  );
+}
+
+function TableDialog({ open, editor, onClose }: { open: boolean; editor: Editor; onClose: () => void }) {
+  const [rows, setRows] = useState('3');
+  const [columns, setColumns] = useState('3');
+  const [headerRow, setHeaderRow] = useState(true);
+  const inTable = editor.isActive('table');
+  const rowCount = Number(rows);
+  const columnCount = Number(columns);
+  const valid = Number.isInteger(rowCount) && rowCount >= 1 && rowCount <= 20 && Number.isInteger(columnCount) && columnCount >= 1 && columnCount <= 12;
+
+  const run = (command: () => boolean) => {
+    command();
+    onClose();
+  };
+
+  if (inTable) {
+    return (
+      <Modal open={open} onClose={onClose} size="sm" title="Edit table">
+        <p className="mb-4 text-sm leading-6 text-zinc-600">Choose an action for the cell containing your cursor.</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Button onClick={() => run(() => editor.chain().focus().addRowBefore().run())}>Add row above</Button>
+          <Button onClick={() => run(() => editor.chain().focus().addRowAfter().run())}>Add row below</Button>
+          <Button onClick={() => run(() => editor.chain().focus().addColumnBefore().run())}>Add column left</Button>
+          <Button onClick={() => run(() => editor.chain().focus().addColumnAfter().run())}>Add column right</Button>
+          <Button onClick={() => run(() => editor.chain().focus().toggleHeaderRow().run())}>Toggle header row</Button>
+          <Button onClick={() => run(() => editor.chain().focus().deleteRow().run())}>Delete row</Button>
+          <Button onClick={() => run(() => editor.chain().focus().deleteColumn().run())}>Delete column</Button>
+          <Button variant="danger" onClick={() => run(() => editor.chain().focus().deleteTable().run())}>Delete table</Button>
+        </div>
+      </Modal>
+    );
+  }
+
+  const insert = () => {
+    if (!valid) return;
+    editor.chain().focus().insertTable({ rows: rowCount, cols: columnCount, withHeaderRow: headerRow }).run();
+    onClose();
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="sm"
+      title="Insert a table"
+      footer={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button variant="primary" disabled={!valid} onClick={insert}>Insert table</Button>
+        </>
+      }
+    >
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          insert();
+        }}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Rows" hint="1 to 20">
+            {(wiring) => <Input {...wiring} autoFocus type="number" min="1" max="20" value={rows} onChange={(event) => setRows(event.target.value)} />}
+          </Field>
+          <Field label="Columns" hint="1 to 12">
+            {(wiring) => <Input {...wiring} type="number" min="1" max="12" value={columns} onChange={(event) => setColumns(event.target.value)} />}
+          </Field>
+        </div>
+        <Checkbox checked={headerRow} onChange={setHeaderRow} label="Use the first row as a header" />
+        {!valid && <Notice tone="warn">Enter 1–20 rows and 1–12 columns.</Notice>}
+      </form>
+    </Modal>
   );
 }
 

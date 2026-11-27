@@ -5,6 +5,47 @@
 import { links } from "./site";
 import { sectionMedia } from "./section-media";
 
+/** "AI Section" from the Figma Home frame — an interactive 3-step showcase. */
+export const aiAnswers = {
+  title: "Go beyond extraction with Nextract AI",
+  lead: "Nextract's AI doesn't just process information. It helps your team understand what's inside documents, investigate discrepancies, and find answers without manually searching through records.",
+  steps: [
+  {
+    id: "understand",
+    icon: "/images/ai/ic-understand.svg",
+    title: "AI-Generated Document Summaries",
+    description:
+      "Turn complex documents and extracted information into concise summaries, highlighting key details without manually reviewing every field.",
+    lottie: "/animations/ai-understand.json",
+    media: sectionMedia,
+    panelAlt:
+      "A document summary with highlighted lines, one flagged in red for attention",
+  },
+  {
+    id: "next",
+    icon: "/images/ai/ic-next.svg",
+    title: "AI-Powered Exception Analysis",
+    description:
+      "Understand why mismatches were flagged, which values differ, and what needs to be verified before taking action.",
+    lottie: "/animations/ai-next.json",
+    media: sectionMedia,
+    panelAlt:
+      "A document with AI action tags: Check Price, Date Mismatch, Qty/PO Matched, Expired and Critical Risk",
+  },
+  {
+    id: "ask",
+    icon: "/images/ai/ic-ask.svg",
+    title: "Conversational AI Assistant",
+    description:
+      "Ask questions in natural language about your documents, matching results, exceptions, and workflow status to get clear answers in seconds.",
+    lottie: "/animations/ai-ask.json",
+    media: sectionMedia,
+    panelAlt:
+      "A chat where the AI answers a question about differences between a document and its extracted data",
+  },
+] as const,
+};
+
 export const hero = {
   media: sectionMedia,
   titleLead: "Make your documents",

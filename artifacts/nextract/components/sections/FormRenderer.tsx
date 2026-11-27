@@ -82,8 +82,8 @@ export function FormRenderer({ slug }: { slug?: string }) {
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErrors(result.errors ?? {});
-        throw new Error(result.message || "We couldn't send your submission. Please try again.");
+        setErrors(result.error?.fields ?? result.errors ?? {});
+        throw new Error(result.error?.message || result.message || "We couldn't send your submission. Please try again.");
       }
       if (result.redirectUrl) {
         window.location.href = result.redirectUrl;

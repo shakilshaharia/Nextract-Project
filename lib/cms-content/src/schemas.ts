@@ -750,6 +750,29 @@ export const securitySettingsSchema = z.object({
   cspImgSrc: z.array(cspSourceSchema).max(40).default([]),
   cspStyleSrc: z.array(cspSourceSchema).max(40).default([]),
   cspFontSrc: z.array(cspSourceSchema).max(40).default([]),
+
+  // Uptime monitoring. The API checks the public site once a minute and emails
+  // the recipients below when it goes down (after a few failed checks) and
+  // again when it recovers.
+  uptimeMonitor: z
+    .object({
+      enabled: z.boolean().default(false),
+      // Who gets the DOWN / RECOVERED alerts. Multiple addresses supported.
+      recipients: z.array(z.string().trim().toLowerCase().max(200).email('Enter a valid email address.')).max(20).default([]),
+      // Empty = check the public site URL. Otherwise an explicit http(s) URL
+      // (e.g. a specific health endpoint).
+      url: z
+        .string()
+        .trim()
+        .max(500)
+        .refine((value) => value === '' || /^https?:\/\/.+/i.test(value), 'Enter a full http(s) URL, or leave blank to use the site URL.')
+        .default(''),
+      // Consecutive failed checks (one per minute) before an alert is sent.
+      failThreshold: z.number().int().min(1).max(10).default(2),
+      // Minutes between repeat "still down" emails while an outage continues.
+      remindMinutes: z.number().int().min(5).max(1440).default(60),
+    })
+    .default({ enabled: false, recipients: [], url: '', failThreshold: 2, remindMinutes: 60 }),
 });
 
 // ---------------------------------------------------------------------------

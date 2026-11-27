@@ -83,6 +83,18 @@ export function resourcePath(type: ResourceType, slug: string): string {
   return `/${resourceTypeSegment[type]}/${slug}`;
 }
 
+export async function updatePublishedResourceRedirect(tx: Prisma.TransactionClient, post: Pick<WithSummary, 'type' | 'slug' | 'publishedAt' | 'publishedSnapshot'>) {
+  const previous = post.publishedSnapshot;
+  if (!post.publishedAt || !previous || typeof previous !== 'object' || Array.isArray(previous)) return;
+  const { slug, type } = previous;
+  if (typeof slug !== 'string' || (type !== 'BLOG' && type !== 'EVENT' && type !== 'USE_CASE')) return;
+  const fromPath = resourcePath(type, slug);
+  const toPath = resourcePath(post.type, post.slug);
+  if (fromPath === toPath) return;
+  await tx.redirect.upsert({ where: { fromPath }, update: { toPath, statusCode: 301, enabled: true }, create: { fromPath, toPath } });
+  await tx.redirect.deleteMany({ where: { fromPath: toPath } });
+}
+
 export function toResourceSummary(post: WithSummary): PublicResourceSummary {
   const segment = resourceTypeSegment[post.type];
   return {
@@ -132,16 +144,16 @@ export async function getPublicResource(
   });
   if (!post) return null;
   const visible = options.preview ? post : publishedCopy(post);
-  if (resourceTypeSegment[visible.type] !== segment) return null;
+  if (visible.slug !== slug || resourceTypeSegment[visible.type] !== segment) return null;
 
   const summary = toResourceSummary(visible);
   const relatedIds = relatedIdsOf(visible.relatedIds);
 
   const all = await db.post.findMany({ where: { AND: [liveWhere(), { id: { not: post.id } }] }, include: summaryInclude });
-  const others = all.map((p) => toResourceSummary(publishedCopy(p)));
-  const bySlug = new Map(all.map((p) => [p.id, toResourceSummary(publishedCopy(p))] as const));
+  const byId = new Map(all.map((p) => [p.id, toResourceSummary(publishedCopy(p))] as const));
+  const others = [...byId.values()];
 
-  const picked = relatedIds.map((id) => bySlug.get(id)).filter((r): r is PublicResourceSummary => Boolean(r));
+  const picked = [...new Set(relatedIds)].map((id) => byId.get(id)).filter((r): r is PublicResourceSummary => Boolean(r));
   const pickedSlugs = new Set(picked.map((r) => `${r.type}/${r.slug}`));
   const automatic = scoreRelated(summary, others).filter((r) => !pickedSlugs.has(`${r.type}/${r.slug}`));
   const related = [...picked, ...automatic].slice(0, 3);

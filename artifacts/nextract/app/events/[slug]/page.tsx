@@ -23,7 +23,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const { previewToken } = await searchParams;
   const resource = await getCmsResource("events", slug, previewToken);
-  const post = resource ? resourceToPost(resource) : getPost("event", slug);
+  const post = resource ? resourceToPost(resource) : resource === null ? getPost("event", slug) : undefined;
   if (!post) return {};
   return {
     title: `${post.title} | Nextract Events`,
@@ -38,7 +38,7 @@ export default async function EventPostPage({ params, searchParams }: { params: 
   const { previewToken } = await searchParams;
   await connection();
   const resource = await getCmsResource("events", slug, previewToken);
-  const post = resource ? resourceToPost(resource) : getPost("event", slug);
+  const post = resource ? resourceToPost(resource) : resource === null ? getPost("event", slug) : undefined;
   if (!post) notFound();
   return <PostLayout post={post} />;
 }

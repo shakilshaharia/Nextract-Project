@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { PublicResourceSummary } from '@workspace/cms-content';
 import type { NavLink } from './site';
 import { siteUrl, structuredData as staticStructuredData, seo as staticSeo } from './seo';
 
@@ -139,6 +140,7 @@ export type CmsResource = CmsResourceSummary & {
   useCase: null | { industry: string; timeline: string; challenge: string; approach: string[]; benefits: string[]; verifiedOutcomes: string[] };
   event: null | { startsAt: string; endsAt?: string; timeZone: string; format: string; location: string; audience: string; learn: string[]; speakers: Array<{ name: string; role: string }> };
   faqs: Array<{ question: string; answer: string }>;
+  related?: PublicResourceSummary[];
   seo: { seoTitle: string; metaDescription: string };
 };
 
@@ -168,10 +170,13 @@ export async function getCmsResources(): Promise<CmsResourceSummary[] | null> {
   }
 }
 
-export async function getCmsResource(segment: string, slug: string, previewToken?: string): Promise<CmsResource | null> {
+// A healthy CMS can intentionally hide a resource. Bundled content is reserved
+// for outages, so callers must distinguish a 404 from an unavailable CMS.
+export async function getCmsResource(segment: string, slug: string, previewToken?: string): Promise<CmsResource | null | undefined> {
   try {
     const preview = previewToken ? `?previewToken=${encodeURIComponent(previewToken)}` : '';
     const response = await fetch(`${apiUrl}/api/public/resources/${encodeURIComponent(segment)}/${encodeURIComponent(slug)}${preview}`, { cache: 'no-store', signal: AbortSignal.timeout(2500) });
+    if (response.status === 404) return undefined;
     if (!response.ok) return null;
     return ((await response.json()) as { resource: CmsResource }).resource;
   } catch {
@@ -190,17 +195,20 @@ export function sectionIsVisible(bootstrap: CmsBootstrap | null, idOrKey: string
 }
 
 function merge<T>(fallback: T, override: unknown): T {
-  if (!override || typeof override !== 'object') return fallback;
   if (Array.isArray(fallback)) return (Array.isArray(override) ? override : fallback) as T;
-  if (!fallback || typeof fallback !== 'object' || Array.isArray(override)) return override as T;
+  if (fallback === null || typeof fallback !== 'object') {
+    return (typeof override === typeof fallback ? override : fallback) as T;
+  }
+  if (!override || typeof override !== 'object' || Array.isArray(override)) return fallback;
   const result = { ...(fallback as Record<string, unknown>) };
   for (const [key, value] of Object.entries(override as Record<string, unknown>)) {
-    result[key] = key in result ? merge(result[key], value) : value;
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+    result[key] = Object.hasOwn(result, key) ? merge(result[key], value) : value;
   }
   return result as T;
 }
 
-export function managedContent<T>(bootstrap: CmsBootstrap | null, key: string, fallback: T): T {
+export function managedContent<T>(bootstrap: { page: { sections: CmsSection[] } | null } | null, key: string, fallback: T): T {
   const section = bootstrap?.page?.sections.find((item) => item.type === 'managed' && item.key === key && item.visible);
   if (!section || typeof section.contentJson !== 'string') return fallback;
   try {

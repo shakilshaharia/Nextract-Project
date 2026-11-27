@@ -22,7 +22,7 @@ import { assertApproved, editWorkflow, recordRevision, snapshotForWorkflow } fro
 import { parseSeo } from '../lib/content.ts';
 import { HttpError, badRequest, forbidden, notFound, parse } from '../lib/http.ts';
 import { optionalText, pageArgs, paged, pagingSchema } from '../lib/paging.ts';
-import { clearOtherFeatured, faqsOf, relatedIdsOf, solutionsOf } from '../lib/posts.ts';
+import { clearOtherFeatured, faqsOf, relatedIdsOf, solutionsOf, updatePublishedResourceRedirect } from '../lib/posts.ts';
 import { issuePreviewToken } from '../lib/preview.ts';
 import { plainText, sanitizeRichText } from '../lib/sanitize.ts';
 
@@ -246,8 +246,17 @@ postsRouter.patch('/:id', async (req, res) => {
         : undefined;
 
   const html = input.contentHtml !== undefined ? sanitizeRichText(input.contentHtml) : undefined;
-  const frozen = !post.publishedSnapshot && post.publishedAt && ['PUBLISHED', 'SCHEDULED'].includes(post.status)
-    ? await snapshotForWorkflow('post', post.id) : undefined;
+  let frozen: Prisma.InputJsonValue | undefined;
+  if (post.publishedAt && ['PUBLISHED', 'SCHEDULED'].includes(post.status)) {
+    const snapshot = post.publishedSnapshot;
+    if (!snapshot) {
+      frozen = await snapshotForWorkflow('post', post.id);
+    } else if (input.faqs !== undefined && typeof snapshot === 'object' && !Array.isArray(snapshot) && !('faqs' in snapshot)) {
+      // Legacy snapshots did not store FAQs. Keep the currently visible FAQ
+      // before the first edit made with snapshot-aware publishing.
+      frozen = { ...snapshot, faqs: post.faqs ?? [] };
+    }
+  }
 
   const updated = await db.post.update({
     where: { id: post.id },
@@ -276,14 +285,6 @@ postsRouter.patch('/:id', async (req, res) => {
     },
     include,
   });
-
-  // Keep the old URL working when the slug or the type (hence the URL segment) changes.
-  const oldPath = postPath(post.type, post.slug);
-  const newPath = postPath(updated.type, updated.slug);
-  if (oldPath !== newPath && post.publishedAt) {
-    await db.redirect.upsert({ where: { fromPath: oldPath }, update: { toPath: newPath, statusCode: 301, enabled: true }, create: { fromPath: oldPath, toPath: newPath } });
-    await db.redirect.deleteMany({ where: { fromPath: newPath } });
-  }
 
   logActivity(req, 'update', 'post', `Edited post "${updated.title}"`, updated.id);
   await recordRevision(req, 'post', updated.id, updated.workflowVersion, 'save');
@@ -315,6 +316,7 @@ postsRouter.post('/:id/publish', requireCap('posts.publish'), async (req, res) =
   const updated = await db.$transaction(async (tx) => {
     const guard = await tx.post.updateMany({ where: { id: post.id, workflowVersion: post.workflowVersion, workflowState: post.workflowState, approvedVersion: post.approvedVersion }, data: { status: 'PUBLISHED', publishAt: null, publishedAt: post.publishedAt ?? new Date(), publishedSnapshot: snapshot, workflowState: 'PUBLISHED', approvedVersion: post.workflowVersion } });
     if (!guard.count) throw new HttpError(409, 'The resource changed. Reload and request approval again.', 'conflict');
+    await updatePublishedResourceRedirect(tx, post);
     if (post.featured) await clearOtherFeatured(tx, post.id);
     return tx.post.findUniqueOrThrow({ where: { id: post.id }, include });
   });

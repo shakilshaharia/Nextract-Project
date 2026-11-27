@@ -37,13 +37,12 @@ export function ResourceLibrary({ content = resourcesPage }: { content?: Resourc
         </h2>
 
         <div className={styles.controls}>
-          <div className={styles.tabs} role="tablist" aria-label="Filter resources">
+          <div className={styles.tabs} role="group" aria-label="Filter resources">
             {filters.map((filter) => (
               <button
                 key={filter}
                 type="button"
-                role="tab"
-                aria-selected={activeFilter === filter}
+                aria-pressed={activeFilter === filter}
                 className={styles.tab}
                 data-active={activeFilter === filter}
                 onClick={() => setActiveFilter(filter)}
@@ -82,12 +81,13 @@ export function ResourceLibrary({ content = resourcesPage }: { content?: Resourc
         {results.length > 0 ? (
           <ul className={styles.grid}>
             {results.map((item) => (
-              <li key={item.title} className={styles.cardItem}>
+              <li key={item.href} className={styles.cardItem}>
                 <a href={item.href} className={styles.card}>
                   <span className={styles.cover} data-category={item.category}>
                     {"image" in item && item.image ? (
                       <Image
                         src={item.image}
+                        unoptimized={/^https?:\/\//i.test(item.image)}
                         alt=""
                         fill
                         className={styles.coverImg}

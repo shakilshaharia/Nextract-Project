@@ -10,6 +10,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { readdir, stat, writeFile } from 'node:fs/promises';
+import { sanitizeRichText } from '../src/lib/sanitize.ts';
 import path from 'node:path';
 import {
   defaultCollections,
@@ -489,6 +490,7 @@ function blockHtml(block: BodyBlock) {
   if (block.kind === 'paragraph') return `<p>${esc(block.text)}</p>`;
   if (block.kind === 'list') return `<ul>${block.items.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>`;
   if (block.kind === 'quote') return `<blockquote><p>${esc(block.text)}</p>${block.cite ? `<cite>${esc(block.cite)}</cite>` : ''}</blockquote>`;
+  if (block.kind === 'richText') return sanitizeRichText(block.html);
   return `<figure><img src="${esc(block.src)}" alt="${esc(block.alt)}">${block.caption ? `<figcaption>${esc(block.caption)}</figcaption>` : ''}</figure>`;
 }
 

@@ -19,6 +19,7 @@ const pageIds: string[] = [];
 const categorySlugs: string[] = [];
 const mediaUrls: string[] = [];
 const metricLabels: string[] = [];
+const redirectPaths: string[] = [];
 
 async function session(role: 'AUTHOR' | 'EDITOR' | 'SUPER_ADMIN') {
   const user = await db.user.create({ data: { email: `workflow-${role.toLowerCase()}-${suffix}@example.invalid`, name: `${role} integration`, passwordHash: 'test-only', role } });
@@ -56,7 +57,9 @@ try {
   const postId = created.data.post.id as string;
   postIds.push(postId);
   const slug = created.data.post.slug as string;
-  assert.equal((await call('PATCH', `/api/admin/posts/${postId}`, author.cookie, { excerpt: 'Review test summary', contentHtml: '<p>Original approved body</p>' })).status, 200);
+  const approvedFaqs = [{ question: 'Approved question?', answer: 'Approved answer.' }];
+  const draftFaqs = [{ question: 'Edited question?', answer: 'Edited answer.' }];
+  assert.equal((await call('PATCH', `/api/admin/posts/${postId}`, author.cookie, { excerpt: 'Review test summary', contentHtml: '<p>Original approved body</p>', faqs: approvedFaqs })).status, 200);
   assert.equal((await call('POST', `/api/admin/posts/${postId}/publish`, author.cookie)).status, 403);
   assert.equal((await call('POST', `/api/admin/posts/${postId}/publish`, editor.cookie)).status, 403);
   assert.equal((await call('POST', `/api/admin/workflow/post/${postId}`, author.cookie, { action: 'submit', reviewerId: editor.user.id, comment: 'Ready to review' })).status, 200);
@@ -71,8 +74,11 @@ try {
   const publicPath = `/api/public/resources/resources/${slug}`;
   assert.match((await call('GET', publicPath)).data.resource.html, /Original approved body/);
 
-  assert.equal((await call('PATCH', `/api/admin/posts/${postId}`, author.cookie, { contentHtml: '<p>Unapproved new body</p>' })).status, 200);
-  assert.match((await call('GET', publicPath)).data.resource.html, /Original approved body/);
+  const editedHtml = '<p>Unapproved new body</p><table><tbody><tr><th colspan="2">Sample heading</th></tr></tbody></table>';
+  assert.equal((await call('PATCH', `/api/admin/posts/${postId}`, author.cookie, { contentHtml: editedHtml, faqs: draftFaqs })).status, 200);
+  const liveDuringReview = (await call('GET', publicPath)).data.resource;
+  assert.match(liveDuringReview.html, /Original approved body/);
+  assert.deepEqual(liveDuringReview.faqs, approvedFaqs);
   assert.equal((await call('POST', `/api/admin/posts/${postId}/publish`, editor.cookie)).status, 403);
   assert.equal((await call('POST', `/api/admin/workflow/post/${postId}`, author.cookie, { action: 'submit', reviewerId: editor.user.id })).status, 200);
   assert.equal((await call('POST', `/api/admin/workflow/post/${postId}`, editor.cookie, { action: 'start-review' })).status, 200);
@@ -82,6 +88,7 @@ try {
   assert.equal((await call('POST', `/api/admin/workflow/post/${postId}`, editor.cookie, { action: 'approve' })).status, 200);
   assert.equal((await call('POST', `/api/admin/posts/${postId}/publish`, editor.cookie)).status, 200);
   assert.match((await call('GET', publicPath)).data.resource.html, /Unapproved new body/);
+  assert.deepEqual((await call('GET', publicPath)).data.resource.faqs, draftFaqs);
   const history = await call('GET', `/api/admin/workflow/post/${postId}`, author.cookie);
   assert.ok(history.data.revisions.length >= 5);
   const notifications = await call('GET', '/api/admin/workflow/notifications', author.cookie);
@@ -91,6 +98,21 @@ try {
   const exported = await call('GET', '/api/admin/portability/export?format=json&scope=posts', admin.cookie);
   assert.equal(exported.status, 200);
   assert.ok(exported.data.posts.some((item: { slug: string }) => item.slug === slug));
+  assert.deepEqual(exported.data.posts.find((item: { slug: string }) => item.slug === slug)?.faqs, draftFaqs);
+  const markdownExported = await call('GET', '/api/admin/portability/export?format=markdown&scope=posts', admin.cookie);
+  assert.equal(markdownExported.status, 200);
+  assert.match(markdownExported.data.text, /<th colspan="2">Sample heading<\/th>/);
+  assert.match(markdownExported.data.text, /Edited question\?/);
+  const renamedSlug = `${slug}-renamed`;
+  const oldPath = `/resources/${slug}`;
+  redirectPaths.push(oldPath);
+  assert.equal((await call('POST', `/api/admin/posts/${postId}/unpublish`, editor.cookie)).status, 200);
+  assert.equal((await call('PATCH', `/api/admin/posts/${postId}`, author.cookie, { slug: renamedSlug })).status, 200);
+  assert.equal(await db.redirect.findUnique({ where: { fromPath: oldPath } }), null);
+  assert.equal((await call('GET', `/api/public/resources/resources/${renamedSlug}`)).status, 404);
+  assert.equal((await call('POST', `/api/admin/posts/${postId}/publish`, admin.cookie)).status, 200);
+  assert.equal((await db.redirect.findUnique({ where: { fromPath: oldPath } }))?.toPath, `/resources/${renamedSlug}`);
+  assert.equal((await call('GET', `/api/public/resources/resources/${renamedSlug}`)).status, 200);
   const markdown = `---\ntitle: Imported ${suffix}\nslug: imported-${suffix}\n---\n\n# Imported ${suffix}\n\nA **portable** draft.`;
   const preview = await upload('/api/admin/portability/preview', admin.cookie, markdown, { strategy: 'skip' });
   assert.equal(preview.status, 200);
@@ -171,6 +193,7 @@ try {
   for (const id of pageIds) { await db.contentRevision.deleteMany({ where: { entityType: 'page', entityId: id } }); await db.page.deleteMany({ where: { id } }); }
   await db.category.deleteMany({ where: { slug: { in: categorySlugs } } });
   await db.metric.deleteMany({ where: { label: { in: metricLabels } } });
+  await db.redirect.deleteMany({ where: { fromPath: { in: redirectPaths } } });
   await db.mediaAsset.deleteMany({ where: { url: { in: mediaUrls } } });
   await db.workflowNotification.deleteMany({ where: { userId: { in: userIds } } });
   for (const id of sessionIds) await db.session.deleteMany({ where: { id } });
